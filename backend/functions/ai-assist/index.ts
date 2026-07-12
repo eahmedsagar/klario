@@ -72,8 +72,14 @@ Deno.serve(async (req) => {
       messages: [{ role: "user", content: spec.user }],
     }),
   });
+  if (!r.ok) {
+    const errBody = await r.text();
+    console.error(`anthropic ${r.status} for task=${task} model=${spec.model}: ${errBody.slice(0, 500)}`);
+    return new Response(JSON.stringify({ error: "upstream", status: r.status, detail: errBody.slice(0, 300) }), { status: 502, headers: cors });
+  }
   const j = await r.json();
   const text = j?.content?.[0]?.text ?? "";
+  if (!text) console.error(`anthropic empty text for task=${task}: ${JSON.stringify(j).slice(0, 300)}`);
   // hard JSON validation — refuse to pass through non-JSON
   let out: unknown;
   try { out = JSON.parse(text.replace(/^```json\s*|\s*```$/g, "")); }
