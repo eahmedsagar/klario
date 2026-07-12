@@ -495,7 +495,10 @@
   .dv-chips button{flex:0 0 auto;border:1px solid var(--hair-2);background:transparent;color:var(--ink-3);border-radius:999px;
     padding:5.5px 13px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap}
   .dv-chips button.on{background:var(--bg-3);color:var(--ink);border-color:var(--hair-2)}
-  .en{background:var(--bg-2);border:1px solid var(--hair);border-radius:16px;padding:13px 15px;margin-bottom:10px;cursor:pointer}
+  .en{border-radius:16px;margin-bottom:10px;position:relative;overflow:hidden}
+  .en-in{background:var(--bg-2);border:1px solid var(--hair);border-radius:16px;padding:13px 15px;cursor:pointer;position:relative;z-index:2;transition:transform .18s ease}
+  .en.swiped .en-in{transform:translateX(-96px)}
+  .en-del{position:absolute;top:0;right:0;bottom:0;width:96px;background:#c0442f;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;z-index:1;border:none;font-family:inherit;cursor:pointer;border-radius:16px}
   .en b.en-t{font-size:14px;font-weight:700;display:block;line-height:1.35}
   .en p.en-b{font-size:12.5px;color:var(--ink-2);margin-top:3px;line-height:1.45}
   .en .en-meta{display:flex;align-items:center;gap:8px;margin-top:9px;flex-wrap:wrap}
@@ -851,7 +854,7 @@
         <button class="dv-add" onclick="addNote()">Add</button>
       </div>
       <input type="file" id="dvPhoto" accept="image/*" capture="environment" style="display:none" onchange="if(this.files[0])diaryPhotoChosen(this.files[0]);this.value='';">
-      <input type="file" id="dvUpload" accept="image/*,application/pdf" style="display:none" onchange="if(this.files[0])diaryPhotoChosen(this.files[0]);this.value='';">
+      <input type="file" id="dvUpload" accept="image/*,application/pdf" multiple style="display:none" onchange="if(this.files.length)diaryFilesChosen(this.files);this.value='';">
       <div id="capMenu" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.5)" onclick="if(event.target===this)closeCapMenu()">
         <div style="position:absolute;left:14px;right:14px;bottom:14px;display:flex;flex-direction:column;gap:8px">
           <div style="background:#1a212c;border-radius:16px;overflow:hidden">
@@ -905,7 +908,7 @@
         <button class="set-row" onclick="applyTheme(!ISLIGHT)" id="appearanceRow">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/></svg>
           <div class="t"><b>Appearance</b><small id="setTheme">Dark</small></div><span class="chev">›</span></button>
-        <div style="text-align:center;font-size:10px;color:var(--ink-3);padding:16px 0 4px" id="verStamp">Klario v0.8.6 · build 2026-07-12m</div>
+        <div style="text-align:center;font-size:10px;color:var(--ink-3);padding:16px 0 4px" id="verStamp">Klario v0.8.7 · build 2026-07-12n</div>
       </div>
     </div>
 
@@ -2816,7 +2819,7 @@ function rrowTap(id,ev){
   openReportById(id);
 }
 function wireSwipe(container){
-  container.querySelectorAll('.rrow').forEach(row=>{
+  container.querySelectorAll('.rrow,.en').forEach(row=>{
     let x0=null,y0=null,dx=0,drag=false;
     const s=(x,y)=>{x0=x;y0=y;dx=0;drag=false;};
     const mv=(x,y)=>{if(x0==null)return;dx=x-x0;if(Math.abs(dx)>8&&Math.abs(dx)>Math.abs(y-y0))drag=true;};
@@ -2911,7 +2914,9 @@ function renderDiary(){
     if(ml!==mon){mon=ml;h+='<div class="sec-label">'+(ml===fmtTL(new Date())?'This month':ml)+'</div>';}
     const t=eType(n);
     const title=n.title||(n.text?n.text.slice(0,60):(t==='rx'?'Prescription':t==='doc'?'Document':'Note'));
-    h+='<div class="en" onclick="openEntry(\''+n.id+'\')">'
+    h+='<div class="en" data-id="'+n.id+'">'
+      +'<button class="en-del" onclick="deleteEntry(\''+n.id+'\',event)">Delete</button>'
+      +'<div class="en-in" onclick="enTap(\''+n.id+'\',event)">'
       +'<b class="en-t">'+String(title).replace(/</g,'&lt;')+'</b>'
       +(n.text&&n.title?'<p class="en-b">'+n.text.replace(/</g,'&lt;')+'</p>':(n.body?'<p class="en-b">'+n.body.replace(/</g,'&lt;')+'</p>':''));
     if(n.type==='ask'){
@@ -2924,9 +2929,10 @@ function renderDiary(){
       +(n.type==='pending'?'<span class="en-shim">Reading…</span>':(n.type!=='ask'?'<span class="en-tag">'+(DTYPE[t]||'Note')+'</span>':''))
       +(n.remindDue?'<span class="en-remind" onclick="event.stopPropagation();toast(\'Reminder set · '+n.remindDue+'\')">Remind · '+n.remindDue+'</span>':(n.autoMeta?'<span class="en-tag" style="border-style:dashed">'+n.autoMeta+'</span>':''))
       +(n.sysTag?'<span class="en-tag">'+n.sysTag+'</span>':'')
-      +'</div></div>';
+      +'</div></div></div>';
   });
   list.innerHTML=h;
+  wireSwipe(list);
   /* LEDGER */
   let l='<div class="lhead"><span class="w">When</span><span class="x">What</span><span class="k">Type</span></div>';
   notes.forEach(n=>{
@@ -2948,6 +2954,11 @@ function diaryFilter(btn){DIARY_FILTER=btn.dataset.f;document.querySelectorAll('
 function diaryCapture(){document.getElementById('capMenu').style.display='block';}
 function closeCapMenu(){document.getElementById('capMenu').style.display='none';}
 function capPick(k){closeCapMenu();document.getElementById(k==='cam'?'dvPhoto':'dvUpload').click();}
+async function diaryFilesChosen(files){
+  const arr=[...files];
+  if(arr.length>1)toast('Adding '+arr.length+' files…');
+  for(const f of arr){await diaryPhotoChosen(f);}   // sequential so each gets its own entry + tagging
+}
 async function diaryPhotoChosen(file){
   const m=MEMBERS[idx];if(!m){toast('Finish setup first');return;}
   const buf=await file.arrayBuffer();
@@ -2968,6 +2979,20 @@ async function diaryPhotoChosen(file){
   const i=RAW.notes.findIndex(x=>x.id===n.id);if(i>=0)RAW.notes[i]=n;
   renderDiary();
 }
+function enTap(id,ev){
+  const row=ev&&ev.currentTarget&&ev.currentTarget.closest('.en');
+  if(row&&row.classList.contains('swiped')){row.classList.remove('swiped');return;}
+  openEntry(id);
+}
+async function deleteEntry(id,ev){
+  if(ev)ev.stopPropagation();
+  const n=RAW.notes.find(x=>x.id===id);if(!n)return;
+  await DB.del('notes',id);
+  if(CLOUD){await _put('kv',{k:'outboxdel:notes:'+id,store:'notes',id,t:Date.now()});if(typeof scheduleSync==='function')scheduleSync();}
+  const i=RAW.notes.findIndex(x=>x.id===id);if(i>=0)RAW.notes.splice(i,1);
+  renderDiary();
+  toast('Entry deleted');
+}
 async function diaryTag(id,t){
   const n=RAW.notes.find(x=>x.id===id);if(!n)return;
   n.type=t;n.title=t==='rx'?'Prescription':t==='doc'?'Medical document':'Photo note';
@@ -2977,7 +3002,9 @@ async function diaryTag(id,t){
 function openEntry(id){
   const n=RAW.notes.find(x=>x.id===id);if(!n)return;
   if(n.photoBuf){
-    const url=URL.createObjectURL(new Blob([n.photoBuf],{type:n.photoType||'image/jpeg'}));
+    const type=n.photoType||'image/jpeg';
+    const url=URL.createObjectURL(new Blob([n.photoBuf],{type}));
+    if(type==='application/pdf'){ window.open(url,'_blank'); return; }   // PDFs open in a viewer, not the image lightbox
     document.getElementById('dvPhotoImg').src=url;
     document.getElementById('dvPhotoView').classList.add('on');
   } else if(n.text){ toast(n.text.slice(0,120)); }
