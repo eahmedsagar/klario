@@ -3057,8 +3057,7 @@ function decorateOnboarding(){
   if(!CLOUD)return;
   const btns=document.querySelector('#ob1 .ob-btns');
   if(btns&&!document.getElementById('obSso')){
-    btns.insertAdjacentHTML('beforebegin','<div id="obSso" class="ob-btns" style="margin-bottom:10px">'
-      +'<button class="ob-btn apple" onclick="cloudSignIn(\'google\')">Continue with Google</button>'
+    btns.insertAdjacentHTML('beforebegin','<div id="obSso" class="ob-btns" style="margin-top:22px;margin-bottom:10px">'
       +'<button class="ob-btn google" onclick="cloudSignIn(\'email\')">Email me a sign-in link</button></div>'
       +'<div class="ob-note" style="margin-bottom:8px">— or start locally, sign in later —</div>');
   }
