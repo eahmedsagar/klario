@@ -908,7 +908,7 @@
         <button class="set-row" onclick="applyTheme(!ISLIGHT)" id="appearanceRow">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/></svg>
           <div class="t"><b>Appearance</b><small id="setTheme">Dark</small></div><span class="chev">›</span></button>
-        <div style="text-align:center;font-size:10px;color:var(--ink-3);padding:16px 0 4px" id="verStamp">Klario v0.8.7 · build 2026-07-12n</div>
+        <div style="text-align:center;font-size:10px;color:var(--ink-3);padding:16px 0 4px" id="verStamp">Klario v0.8.8 · build 2026-07-12o</div>
       </div>
     </div>
 
@@ -1805,7 +1805,7 @@ function openSheet(mKey,sysId){
   lastSheet={mKey,sysId};
   const st=d?d.status:(member.baby?'nodata':(member.status[sysId]||'nodata'));
   document.getElementById('shTitle').textContent=sys.name;
-  document.getElementById('shSub').textContent=d?d.sub:(member.baby?member.name+' · no reports yet':'Not tracked yet');
+  {const sub=document.getElementById('shSub');sub.style.display='';sub.textContent=d?d.sub:(member.baby?member.name+' · no reports yet':'Not tracked yet');}
   const pill=document.getElementById('shPill');
   pill.className='status-pill '+st;pill.textContent=PILL_TEXT[st];pill.style.display='';
   let html='';
@@ -1887,7 +1887,7 @@ function openStories(mKey){
   const list=STORIES[mKey]||[];
   const member=MEMBERS.find(x=>x.key===mKey);
   document.getElementById('shTitle').textContent='Your insights';
-  document.getElementById('shSub').textContent=`${list.length} thing${list.length>1?'s':''} Klario is connecting for you`;
+  {const sub=document.getElementById('shSub');sub.textContent='';sub.style.display='none';}
   const pill=document.getElementById('shPill');
   pill.className='status-pill'; pill.style.display='none';
   let html='';
