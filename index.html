@@ -358,8 +358,27 @@
   .fbadge.na{background:rgba(255,255,255,.06);color:var(--ink-3)}
   .add-btn{width:100%;background:var(--bg-2);border:1px dashed var(--hair-2);border-radius:16px;padding:14px;
     color:var(--ink-2);font-size:13.5px;font-weight:700;cursor:pointer;margin-bottom:10px;font-family:inherit}
-  #addmem,#cprof,#mergepick{position:absolute;inset:0;z-index:86;display:none;flex-direction:column;background:var(--bg-1)}
-  #addmem.on,#cprof.on,#mergepick.on{display:flex}
+  #addmem,#cprof,#mergepick,#reviewq{position:absolute;inset:0;z-index:86;display:none;flex-direction:column;background:var(--bg-1)}
+  #addmem.on,#cprof.on,#mergepick.on,#reviewq.on{display:flex}
+  .rq-card{background:var(--bg-2);border:1px solid var(--hair);border-radius:16px;padding:14px;margin-bottom:12px}
+  .rq-card .rq-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+  .rq-card b.rq-m{font-size:14.5px;font-weight:700}
+  .rq-card .rq-v{font-size:15px;font-weight:800;white-space:nowrap}
+  .rq-why{font-size:11.5px;color:var(--warn);margin-top:6px;font-weight:600}
+  .rq-src{font-size:11px;color:var(--ink-3);margin-top:8px;padding:8px 10px;background:var(--bg-1);border:1px solid var(--hair);
+    border-radius:9px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;line-height:1.5;word-break:break-word}
+  .rq-src span{color:var(--ink-3);text-transform:uppercase;font-size:9px;letter-spacing:.8px;display:block;margin-bottom:3px;font-family:inherit}
+  .rq-acts{display:flex;gap:8px;margin-top:11px}
+  .rq-acts button{flex:1;border-radius:12px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border:1px solid var(--hair-2)}
+  .rq-acts .keep{background:var(--accent);color:#fff;border:none}
+  .rq-acts .del{background:transparent;color:var(--serious)}
+  .rev-banner{background:rgba(250,178,25,.12);border:1px solid rgba(250,178,25,.4);border-radius:14px;
+    padding:12px 14px;margin-bottom:12px;display:flex;gap:10px;align-items:center;cursor:pointer}
+  .rev-banner b{font-size:13px;font-weight:700;display:block}
+  .rev-banner small{font-size:11.5px;color:var(--ink-3)}
+  .rev-banner .go{margin-left:auto;color:var(--accent-2);font-weight:700;font-size:12.5px}
+  .rrow-review{position:absolute;top:8px;right:56px;font-size:9px;font-weight:800;color:var(--warn);
+    background:rgba(250,178,25,.14);border:1px solid rgba(250,178,25,.4);border-radius:6px;padding:1px 6px}
   #addmem .sf-body,#cprof .sf-body{padding-top:6px}
   .mp-card{display:flex;gap:12px;align-items:center;background:var(--bg-2);border:1px solid var(--hair);
     border-radius:16px;padding:13px 14px;margin-bottom:10px;cursor:pointer;width:100%;text-align:left;font-family:inherit}
@@ -989,6 +1008,15 @@
     <div class="sf-body" id="mpBody"></div>
   </div>
 
+  <div id="reviewq">
+    <div class="sf-head">
+      <button class="sf-x" onclick="closeReview()">✕</button>
+      <h1>Check these values</h1>
+      <p>Klario wasn’t fully sure it read these correctly, so they’re <b>held out of your trends</b> until you confirm. Compare each to what the report actually says.</p>
+    </div>
+    <div class="sf-body" id="rqBody"></div>
+  </div>
+
   <input type="file" id="sfInput" multiple accept="application/pdf,image/*" style="display:none">
   <div id="toast"></div>
 </div>
@@ -1145,8 +1173,8 @@ const UCONV={
   'Creatinine':          {u:{'mg/dl':88.42},   lo:15},
   'Urea':                {u:{'mg/dl':0.357}},
   'Uric Acid':           {u:{'mg/dl':59.48},   lo:40},
-  'Bilirubin':           {u:{'mg/dl':17.1}},
-  'Bilirubin (Direct)':  {u:{'mg/dl':17.1}},
+  'Bilirubin':           {u:{'mg/dl':17.1}, lo:2},    // µmol/L never <2; a small number = mg/dL
+  'Bilirubin (Direct)':  {u:{'mg/dl':17.1}, lo:1},
   'Iron':                {u:{'ug/dl':0.1791}},
   'Vitamin D':           {u:{'ng/ml':2.496}},
   'Vitamin B12':         {u:{'pmol/l':1.355}},
@@ -1159,8 +1187,8 @@ const UCONV={
   'MCHC':                {u:{'g/dl':10}},   // g/dL → g/L
   'Albumin':             {u:{'g/dl':10}},
   'Total Protein':       {u:{'g/dl':10}},
-  'Apolipoprotein B':    {u:{'g/l':100}},   // g/L → mg/dL
-  'Apolipoprotein A-I':  {u:{'g/l':100}},
+  'Apolipoprotein B':    {u:{'g/l':100}, lo:10},   // g/L → mg/dL; a value <10 is g/L
+  'Apolipoprotein A-I':  {u:{'g/l':100}, lo:10},
   'HbA1c':               {u:{'%':'affine'}, affine:[10.929,-23.5], lo:25}
 };
 const UNIT_RE=/(mg\s*\/\s*dl|mg\s*\/\s*l|mmol\s*\/\s*mol|mmol\s*\/\s*l|[µμu]mol\s*\/\s*l|g\s*\/\s*dl|g\s*\/\s*l|ng\s*\/\s*ml|ng\s*\/\s*l|pg\s*\/\s*ml|nmol\s*\/\s*l|pmol\s*\/\s*l|[µμu]g\s*\/\s*dl|[µμu]g\s*\/\s*l|[µμu]iu\s*\/\s*ml|miu\s*\/\s*ml|miu\s*\/\s*l|iu\s*\/\s*l|mu\s*\/\s*l|u\s*\/\s*l|mm\s*\/\s*hr|ml\s*\/\s*min|%)/i;
@@ -1196,6 +1224,51 @@ function normalizeReading(name,value,refLo,refHi,printedU,refFromPdf){
   }
   return {value:nv,refLo:nlo,refHi:nhi,refText:refFmt(nlo,nhi)};
 }
+
+/* ============ SAFETY: plausibility, consistency & confidence ============
+   Hard physiological bounds (canonical units) — NOT reference ranges, but the
+   range a value must fall in to be possible in a living person. Anything outside
+   is a parse error, never a real result → quarantined for review. */
+const PLAUS={
+  'Haemoglobin':[3,25],'Haematocrit':[10,70],'MCV':[50,140],'MCH':[10,50],'MCHC':[200,450],
+  'Platelets':[5,1500],'Red Blood Cells':[1,9],'White Blood Cells':[0.5,150],
+  'Ferritin':[1,6000],'Iron':[1,90],'TIBC':[15,130],'Transferrin Saturation':[1,100],'Transferrin':[0.4,6],
+  'Total Cholesterol':[1,25],'LDL Cholesterol':[0.2,20],'HDL Cholesterol':[0.2,5],'Total/HDL Ratio':[1,30],
+  'Non-HDL Cholesterol':[0.2,22],'Triglycerides':[0.1,40],'Apolipoprotein B':[10,400],'Apolipoprotein A-I':[20,400],
+  'Lipoprotein (a)':[0,700],'hs-CRP':[0,500],'ESR':[0,180],
+  'ALT':[1,3000],'AST':[1,3000],'ALP':[5,3000],'GGT':[1,3000],'Bilirubin':[1,700],'Bilirubin (Direct)':[0,400],
+  'Albumin':[10,70],'Total Protein':[30,120],
+  'Creatinine':[15,2500],'Urea':[0.3,60],'eGFR':[1,200],'Sodium':[100,180],'Potassium':[1.5,9.5],'Chloride':[70,140],'Uric Acid':[40,1600],
+  'Glucose':[1,70],'HbA1c':[15,220],'Insulin':[1,3000],'C-peptide':[0.05,40],
+  'TSH':[0.001,150],'Free T4':[1,90],'Free T3':[0.4,45],
+  'Vitamin D':[2,600],'Vitamin B12':[40,4000],'Folate':[0.3,80]
+};
+function isPlausible(name,v){const p=PLAUS[name];return !p||(v>=p[0]&&v<=p[1]);}
+/* score confidence & attach warnings to every parsed value, then run
+   internal-consistency cross-checks (lipids reconcile arithmetically). */
+const HARD_WARN=new Set(['implausible','lipid-mismatch','ratio-mismatch','busy-line']);
+function validateParsed(out){
+  const byName={};
+  out.values.forEach(v=>{
+    const warn=[]; let conf=1;
+    if(!isPlausible(v.marker,v.value)){warn.push('implausible');conf=0;}
+    if(v.unitRaw){warn.push('unit');conf=Math.min(conf,0.7);}   // handled by the unit flag/exclusion, not a review item on its own
+    if(v.refFromPdf===false){warn.push('ref-default');conf-=0.1;}
+    if(v.nnums>4){warn.push('busy-line');conf-=0.15;}
+    v.warn=warn; v.conf=Math.max(0,Math.min(1,conf));
+    v.needsReview=warn.some(w=>HARD_WARN.has(w));
+    byName[v.marker]=v;
+  });
+  const tc=byName['Total Cholesterol'],hdl=byName['HDL Cholesterol'],
+        nhdl=byName['Non-HDL Cholesterol'],ratio=byName['Total/HDL Ratio'];
+  const flag=(x,w)=>{if(!x)return;x.warn.push(w);x.conf=Math.min(x.conf,0.5);x.needsReview=true;};
+  if(tc&&hdl&&nhdl&&Math.abs((tc.value-hdl.value)-nhdl.value)>0.4){flag(tc,'lipid-mismatch');flag(hdl,'lipid-mismatch');flag(nhdl,'lipid-mismatch');}
+  if(tc&&hdl&&ratio&&hdl.value>0&&Math.abs((tc.value/hdl.value)-ratio.value)>Math.max(0.7,ratio.value*0.18))flag(ratio,'ratio-mismatch');
+  return out;
+}
+const WARN_LABEL={implausible:'Value looks impossible for this test',unit:'Unfamiliar unit — kept as printed',
+  'ref-default':'No reference range on the report',' busy-line':'Several numbers on the line','busy-line':'Several numbers on the line',
+  'lipid-mismatch':'Cholesterol figures don’t add up',' ratio-mismatch':'Ratio doesn’t match','ratio-mismatch':'Ratio doesn’t match'};
 
 /* ================= helpers ================= */
 document.getElementById('samplerAdult').innerHTML = ADULT;
@@ -2321,8 +2394,10 @@ function parseReportLines(lines,fileName){
       unitRaw=um?um[1].replace(/\s+/g,''):printedU;
     }
     seen.add(hit.name);
-    out.values.push({marker:hit.name,value,unit:md.unit,refLo,refHi,refText,sys:md.sys,unitRaw});
+    out.values.push({marker:hit.name,value,unit:md.unit,refLo,refHi,refText,sys:md.sys,unitRaw,
+      refFromPdf,nnums:1+(refZone.match(/\d[\d,]*\.?\d*/g)||[]).length,src:t.trim().slice(0,140)});
   }
+  validateParsed(out);
   return out;
 }
 
@@ -2392,7 +2467,7 @@ function rebuildWorld(){
     const reads=RAW.readings.filter(r=>r.memberId===mem.id).sort((a,b)=>new Date(a.dateISO)-new Date(b.dateISO));
     const reps=RAW.reports.filter(r=>r.memberId===mem.id).sort((a,b)=>new Date(a.dateISO)-new Date(b.dateISO));
     const byMarker={};
-    reads.forEach(r=>{if(r.unitRaw)return;(byMarker[r.marker]=byMarker[r.marker]||[]).push(r);});
+    reads.forEach(r=>{if(r.unitRaw||r.needsReview)return;(byMarker[r.marker]=byMarker[r.marker]||[]).push(r);});
     const times=reads.map(r=>+new Date(r.dateISO));
     const t0=Math.min(...times,Infinity),t1=Math.max(...times,-Infinity);
     const xOf=t=>t1===t0?1:( (+new Date(t)-t0)/(t1-t0) );
@@ -2586,6 +2661,13 @@ function renderReports(){
       +'<div class="t"><b>Summary for Doctor</b><small>One shareable page for '+m.name+' — open flags, recent results and notes worth mentioning.</small></div>'
       +'<span class="go">›</span></div>';
   }
+  const nrev=RAW.readings.filter(r=>r.memberId===m.key&&r.needsReview).length;
+  if(nrev){
+    html+='<div class="rev-banner" onclick="openReview(\''+m.key+'\')">'
+      +'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#e6a83c" stroke-width="2"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>'
+      +'<div><b>'+nrev+' value'+(nrev>1?'s':'')+' to check</b><small>Held out of trends until you confirm they were read right</small></div>'
+      +'<span class="go">Review ›</span></div>';
+  }
   if(dups.size){
     html+='<div class="dup-banner" onclick="toast(\'The likely duplicates are marked below — tap Delete on any copy you don’t want\')">'
       +'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#e6a83c" stroke-width="2"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V4h12"/></svg>'
@@ -2643,6 +2725,54 @@ async function deleteReport(id,ev){
     if(typeof scheduleSync==='function')scheduleSync();}
   await loadRaw();rebuildAll();
   toast('Report removed');
+}
+/* ---------- review queue: values Klario wasn't sure it read right ---------- */
+function reviewReason(warn){
+  const w=(warn||'').split(',').filter(Boolean);
+  const L={implausible:'Value looks impossible for this test — likely misread',
+    unit:'Unfamiliar unit — kept exactly as printed',
+    'ref-default':'No reference range found on the report',
+    'busy-line':'Several numbers on the source line — value may be wrong',
+    'lipid-mismatch':'Cholesterol figures don’t add up together',
+    'ratio-mismatch':'Ratio doesn’t match the cholesterol values',
+    'ai-disagree':'Klario AI read this differently'};
+  return w.map(x=>L[x]||x).join(' · ')||'Low confidence';
+}
+function openReview(memberKey){
+  const rows=RAW.readings.filter(r=>r.memberId===memberKey&&r.needsReview)
+    .sort((a,b)=>new Date(b.dateISO)-new Date(a.dateISO));
+  const body=document.getElementById('rqBody');
+  if(!rows.length){closeReview();toast('Nothing left to check');return;}
+  body.innerHTML=rows.map(r=>{
+    const unit=MARKERS[r.marker]?MARKERS[r.marker].unit:'';
+    const rep=RAW.reports.find(x=>x.id===r.reportId);
+    return '<div class="rq-card" data-id="'+r.id+'">'
+      +'<div class="rq-top"><b class="rq-m">'+r.marker+'</b><span class="rq-v">'+r.value+' '+(r.unitRaw||unit)+'</span></div>'
+      +'<div style="font-size:11.5px;color:var(--ink-3);margin-top:2px">'+(rep?rep.clinic+' · '+fmtDL(r.dateISO):fmtDL(r.dateISO))+' · ref '+(r.refText||'—')+'</div>'
+      +'<div class="rq-why">'+reviewReason(r.warn)+'</div>'
+      +(r.src?'<div class="rq-src"><span>What the report said</span>'+r.src.replace(/</g,'&lt;')+'</div>':'')
+      +'<div class="rq-acts"><button class="keep" onclick="reviewKeep(\''+r.id+'\')">Looks right — keep</button>'
+      +'<button class="del" onclick="reviewDrop(\''+r.id+'\')">Wrong — remove</button></div></div>';
+  }).join('');
+  document.getElementById('reviewq').classList.add('on');
+}
+function closeReview(){document.getElementById('reviewq').classList.remove('on');}
+async function reviewKeep(id){
+  const r=RAW.readings.find(x=>x.id===id);if(!r)return;
+  r.needsReview=false;r.warn=(r.warn||'').split(',').filter(w=>w&&w!=='ai-disagree').join(',');r.conf=1;
+  await DB.put('readings',r);
+  const mk=r.memberId;await loadRaw();rebuildAll();
+  const left=RAW.readings.filter(x=>x.memberId===mk&&x.needsReview).length;
+  if(left)openReview(mk);else{closeReview();toast('All checked — added to your trends');}
+}
+async function reviewDrop(id){
+  const r=RAW.readings.find(x=>x.id===id);if(!r)return;
+  const mk=r.memberId;
+  await DB.del('readings',id);
+  if(CLOUD){await _put('kv',{k:'outboxdel:readings:'+id,store:'readings',id,t:Date.now()});if(typeof scheduleSync==='function')scheduleSync();}
+  await loadRaw();rebuildAll();
+  const left=RAW.readings.filter(x=>x.memberId===mk&&x.needsReview).length;
+  if(left)openReview(mk);else{closeReview();toast('Removed');}
 }
 function renderDiary(){
   const m=MEMBERS[typeof idx==='number'?idx:0];if(!m)return;
@@ -3053,7 +3183,8 @@ async function sfDoFile(){
     for(const v of p.values){
       const rd={id:uid(),memberId,reportId:rep.id,marker:v.marker,value:v.value,
         refLo:v.refLo,refHi:v.refHi,refText:v.refText,lab:p.clinic,clinic:p.clinic,dateISO:rep.dateISO,
-        unitRaw:v.unitRaw||null};
+        unitRaw:v.unitRaw||null,
+        needsReview:!!v.needsReview,conf:(v.conf!=null?v.conf:1),warn:(v.warn||[]).join(','),src:v.src||null};
       await DB.put('readings',rd);RAW.readings.push(rd);
     }
     results.push({memberId,count:p.values.length,newMember:a.mode==='new',rel:a.rel});
@@ -3367,11 +3498,13 @@ async function aiRescueParse(parsed){
       refText:refLo!==undefined&&refHi!==undefined?refLo+' – '+refHi:(refHi!==undefined?'< '+refHi:(refLo!==undefined?'> '+refLo:'—')),sys:md.sys};
   }).filter(Boolean);
   if(values.length>parsed.values.length){
-    return{...parsed,values,
+    const merged={...parsed,values,
       name:parsed.name||out.name||null,
       dob:parsed.dob||(out.dob?new Date(out.dob).toISOString():null),
       collected:parsed.collected||(out.collected?new Date(out.collected).toISOString():null),
       clinic:parsed.clinic&&parsed.clinic!=='Lab report'?parsed.clinic:(out.clinic||parsed.clinic)};
+    validateParsed(merged);            // AI-rescued values get the same safety checks
+    return merged;
   }
   return parsed;
 }
