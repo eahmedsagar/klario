@@ -919,7 +919,7 @@
           <svg viewBox="0 0 24 24"><path d="M12 3l2.2 5.6L20 10l-5 3.5L16.5 20 12 16.5 7.5 20 9 13.5 4 10l5.8-1.4z"/></svg>
           <div class="t"><b>Test Klario AI</b><small>Check the AI connection & see any error</small></div><span class="chev">›</span></button>
         <div id="aiTestOut" style="display:none;font-size:12px;line-height:1.5;color:var(--ink-2);background:var(--bg-2);border:1px solid var(--hair);border-radius:12px;padding:12px 14px;margin:2px 0 8px;word-break:break-word"></div>
-        <div style="text-align:center;font-size:10px;color:var(--ink-3);padding:16px 0 4px" id="verStamp">Klario v0.9.1 · build 2026-07-12r</div>
+        <div style="text-align:center;font-size:10px;color:var(--ink-3);padding:16px 0 4px" id="verStamp">Klario v0.9.2 · build 2026-07-12s</div>
       </div>
     </div>
 
@@ -1891,11 +1891,13 @@ function bindSrc(body,mKey,sysId){
 function closeSheet(){
   document.getElementById('sheet').classList.remove('show');
   document.getElementById('scrim').classList.remove('show');
+  window._storiesOpenKey=null;
 }
 document.getElementById('scrim').addEventListener('click',closeSheet);
 
 /* ================= stories sheet ================= */
 function openStories(mKey){
+  window._storiesOpenKey=mKey;
   const list=STORIES[mKey]||[];
   const member=MEMBERS.find(x=>x.key===mKey);
   document.getElementById('shTitle').textContent='Your insights';
@@ -2584,6 +2586,9 @@ async function loadRaw(){
   RAW.members.sort((a,b)=>(b.isSelf?1:0)-(a.isSelf?1:0)||a.createdAt-b.createdAt);
 }
 function firstName(n){return (n||'').trim().split(/\s+/)[0];}
+/* an insight's body = code-owned facts + (AI or fallback) interpretation + code-owned date. The AI only
+   ever rewrites `.interp` (the narrative) — the numbers, ref ranges and dates are never model-generated. */
+function storyBody(s){return (s.factList?s.factList+' ':'')+(s.interp||'')+(s.lastT?' '+s.lastT.trim():'');}
 
 function rebuildWorld(){
   MEMBERS=[];SHEETS={};STORIES={};TRENDS_BY={};TRENDS_SUB={};DATE_RESULTS={};TL_POINTS={};
@@ -2664,26 +2669,30 @@ function rebuildWorld(){
       if(mo<12)return mo+' month'+(mo>1?'s':'')+' ago';
       const y=Math.floor(mo/12),rem=mo%12;return y+' year'+(y>1?'s':'')+(rem?' '+rem+' mo':'')+' ago';};
     const lastTested=mks=>{const iso=mks.map(m=>m.lastISO).filter(Boolean).sort().pop();return iso?' Last tested '+ageAgo(iso)+'.':'';};
+    const amk=mks=>mks.slice(0,6).map(m=>({name:m.name,value:m.val,unit:m.unit,flag:m.flag,ref:m.ref}));
     if(attS.includes('cardio')){
       const sys=['cardio'];if(attS.includes('inflam'))sys.push('inflam');
       const mks=sys.flatMap(mkList);
+      const factList=mks.slice(0,4).map(m=>m.name+' '+m.val+' ('+({hi:'high',lo:'low',dr:'drifting'}[m.flag])+mref(m)+')').join(', ')+(mks.length>4?' and more':'')+'.';
+      const interp=sys.length>1?'Lipids and inflammation moved together — one conversation for your doctor.':'Worth a doctor conversation.';
       stories.push({status:'att',head:'Your heart story needs attention',
         teaser:mks.length+' marker'+(mks.length>1?'s':'')+' flagged — '+mks[0].name.replace(' Cholesterol','')+' leads.',
-        body:mks.slice(0,4).map(m=>m.name+' '+m.val+' ('+({hi:'high',lo:'low',dr:'drifting'}[m.flag])+mref(m)+')').join(', ')+
-          (mks.length>4?' and more':'')+'. '+(sys.length>1?'Lipids and inflammation moved together — one conversation for your doctor.':'Worth a doctor conversation.')+lastTested(mks),
+        factList,interp,lastT:lastTested(mks),body:storyBody({factList,interp,lastT:lastTested(mks)}),amk:amk(mks),
         systems:sys,primary:'cardio',note:noteFor('cardio')});
     }
     attS.filter(s=>s!=='cardio'&&!(s==='inflam'&&attS.includes('cardio'))).forEach(zid=>{
       const z=ZONES.find(z=>z.id===zid);const mks=mkList(zid);
+      const factList=mks.slice(0,4).map(m=>m.name+' '+m.val+' ('+({hi:'high',lo:'low'}[m.flag]||'off')+mref(m)+')').join(', ')+'.';
       stories.push({status:'att',head:z.name+' needs attention',
         teaser:mks[0].name+' '+mks[0].val+({hi:' (high)',lo:' (low)'}[mks[0].flag]||'')+(mks.length>1?' +'+(mks.length-1)+' more':'')+'.',
-        body:mks.slice(0,4).map(m=>m.name+' '+m.val+' ('+({hi:'high',lo:'low'}[m.flag]||'off')+mref(m)+')').join(', ')+'.'+lastTested(mks),
+        factList,interp:'',lastT:lastTested(mks),body:storyBody({factList,interp:'',lastT:lastTested(mks)}),amk:amk(mks),
         systems:[zid],primary:zid,note:noteFor(zid)});
     });
     watchS.forEach(zid=>{
       const z=ZONES.find(z=>z.id===zid);const mks=(sysMarkers[zid]||[]).filter(m=>m.flag==='dr');
       stories.push({status:'watch',head:(mks[0]?mks[0].name:z.name)+' drifting',
         teaser:'Still in range, but moving one way across tests.',
+        factList:'',interp:'Still in range, but moving the same direction across recent tests — a recheck would settle it.',lastT:lastTested(mks),amk:amk(mks),
         body:'Still in range, but moving the same direction across recent tests — a recheck would settle it.'+lastTested(mks),
         systems:[zid],primary:zid,note:noteFor(zid)});
     });
@@ -3876,16 +3885,24 @@ async function aiCrossCheck(parsed,text){
 /* richer prose after each rebuild (fills in over the template text) */
 async function aiNarrate(){
   const m=MEMBERS[idx];if(!m||!m.hasData)return;
-  const facts={member:{name:m.name,dob:m.dob},systems:{}};
+  const facts={member:{name:m.name,dob:m.dob,isInfant:!!m.baby},systems:{},insights:[],
+    guidance:'For each entry in `insights`, write insightBodies[idx] as 2-3 warm, plain-language British-English sentences: what this pattern means for this person and a sensible, non-alarming next step. Do NOT restate the raw numbers or reference ranges — they are shown separately. Never change a status, never diagnose or prescribe. For an infant, defer clinical judgement to a paediatrician.'};
   ZONES.forEach(z=>{const sh=SHEETS[m.key+':'+z.id];if(!sh)return;
     facts.systems[z.id]={name:z.name,status:sh.status,
       markers:sh.markers.map(k=>({name:k.name,value:k.val,unit:k.unit,flag:k.flag,ref:k.ref,history:k.hist}))};});
+  (STORIES[m.key]||[]).forEach((s,i)=>facts.insights.push({idx:i,headline:s.head,status:s.status,systems:s.systems,markers:s.amk||[]}));
   const out=await aiAssist('narrate',{facts});
   if(!out)return;
   if(out.systemSummaries)Object.entries(out.systemSummaries).forEach(([zid,txt])=>{
     const sh=SHEETS[m.key+':'+zid];if(sh&&typeof txt==='string'&&txt.length>20)sh.summary=txt.replace(/</g,'&lt;');
   });
+  let changed=false;
+  if(out.insightBodies)Object.entries(out.insightBodies).forEach(([i,txt])=>{
+    const s=(STORIES[m.key]||[])[+i];
+    if(s&&typeof txt==='string'&&txt.trim().length>20){s.interp=txt.trim().replace(/</g,'&lt;');s.body=storyBody(s);changed=true;}
+  });
   if(out.doctorParagraph&&typeof out.doctorParagraph==='string')m.doctorParagraph=out.doctorParagraph.replace(/</g,'&lt;');
+  if(changed&&window._storiesOpenKey===m.key)openStories(m.key);   // live-refresh if the insights sheet is open
 }
 /* smarter diary tagging */
 const _addNote=addNote;
