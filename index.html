@@ -623,6 +623,10 @@
   .prow b{font-variant-numeric:tabular-nums}
   .prow .pf{font-weight:800;font-size:9.5px}
   .prow .pf.H{color:#c2402f}.prow .pf.L{color:#1d5fbf}.prow .pf.ok{color:#3d9950}
+  .uflag{font-style:italic;font-weight:600;font-size:9px;color:#8a8880;background:#eeece4;
+    border:1px solid #ddd9cc;border-radius:6px;padding:1px 5px;white-space:nowrap}
+  .unote{margin-top:12px;padding:10px 12px;border:1px dashed #cfccc0;border-radius:10px;
+    font-size:10px;color:#8a8880;line-height:1.5}
   .prow.hl{background:#ffedbe;outline:2px solid #e0a400;border-radius:6px}
   .paper .pfoot{font-size:9px;color:#8a8880;margin-top:12px;line-height:1.5}
   #toast{position:absolute;left:50%;bottom:96px;transform:translateX(-50%) translateY(20px);z-index:70;
@@ -2222,8 +2226,14 @@ function parseReportLines(lines,fileName){
     /* normalise cross-lab units to this marker's canonical unit */
     const nz=normalizeReading(hit.name,value,refLo,refHi,printedU,refFromPdf);
     if(nz){value=nz.value;refLo=nz.refLo;refHi=nz.refHi;refText=nz.refText;}
+    /* unconvertible unit? keep as printed but FLAG it so Ahmed can see & report it */
+    let unitRaw=null;
+    if(!nz&&printedU&&printedU!==normU(md.unit)
+       &&!(UCONV[hit.name]&&UCONV[hit.name].u[printedU]!==undefined)){
+      unitRaw=um?um[1].replace(/\s+/g,''):printedU;
+    }
     seen.add(hit.name);
-    out.values.push({marker:hit.name,value,unit:md.unit,refLo,refHi,refText,sys:md.sys});
+    out.values.push({marker:hit.name,value,unit:md.unit,refLo,refHi,refText,sys:md.sys,unitRaw});
   }
   return out;
 }
@@ -2294,7 +2304,7 @@ function rebuildWorld(){
     const reads=RAW.readings.filter(r=>r.memberId===mem.id).sort((a,b)=>new Date(a.dateISO)-new Date(b.dateISO));
     const reps=RAW.reports.filter(r=>r.memberId===mem.id).sort((a,b)=>new Date(a.dateISO)-new Date(b.dateISO));
     const byMarker={};
-    reads.forEach(r=>{(byMarker[r.marker]=byMarker[r.marker]||[]).push(r);});
+    reads.forEach(r=>{if(r.unitRaw)return;(byMarker[r.marker]=byMarker[r.marker]||[]).push(r);});
     const times=reads.map(r=>+new Date(r.dateISO));
     const t0=Math.min(...times,Infinity),t1=Math.max(...times,-Infinity);
     const xOf=t=>t1===t0?1:( (+new Date(t)-t0)/(t1-t0) );
@@ -2660,7 +2670,10 @@ async function openReportById(rid,hlName){
     +'<div class="prow phead"><span>Analyte</span><span>Result</span><span>Ref</span><span>Flag</span></div>'
     +rows.map(r=>{const st=stOfReading(r.value,r.refLo,r.refHi);
       const f=st==='hi'?'H':st==='lo'?'L':'ok';
-      return '<div class="prow '+(hlName&&r.marker===hlName?'hl':'')+'"><span>'+r.marker+'</span><b>'+r.value+' '+(MARKERS[r.marker]?MARKERS[r.marker].unit:'')+'</b><span>'+(r.refText||'—')+'</span><span class="pf '+f+'">'+f.toUpperCase()+'</span></div>';}).join('')
+      const val=r.unitRaw?(r.value+' <em class="uflag">'+r.unitRaw+' · as printed</em>')
+        :(r.value+' '+(MARKERS[r.marker]?MARKERS[r.marker].unit:''));
+      return '<div class="prow '+(hlName&&r.marker===hlName?'hl':'')+'"><span>'+r.marker+'</span><b>'+val+'</b><span>'+(r.refText||'—')+'</span><span class="pf '+f+'">'+f.toUpperCase()+'</span></div>';}).join('')
+    +(rows.some(r=>r.unitRaw)?'<div class="unote">Values marked “as printed” use a unit Klario can’t convert yet, so they aren’t compared against your other results. Mention it and the conversion gets added.</div>':'')
     +((rep.pdfBuf||rep.blob||rep.pdf_path)?'<div class="share-row"><button class="prim" onclick="openOriginalPdf(\''+rid+'\')"><svg viewBox="0 0 24 24"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/></svg>Open original PDF</button></div>':'');
   document.getElementById('rview').classList.add('show');
 }
@@ -2898,8 +2911,10 @@ function sfConfirm(){
         +['Partner','Child','Parent','Sibling','Other'].map(r=>'<button onclick="sfPickRel('+j+',this,\''+r+'\')">'+r+'</button>').join('')+'</div>'
         +'<span class="cf-link" onclick="sfReassign('+j+')">This is someone already in Klario</span>';
     }
+    const nRaw=p.values.filter(v=>v.unitRaw).length;
     return '<div class="cf-card"><h4>'+p.clinic+' · '+panel+'</h4>'
-      +'<div class="cf-sub">'+(p.collected?fmtDL(p.collected):'date not detected')+' · '+p.values.length+' values</div>'+who+'</div>';
+      +'<div class="cf-sub">'+(p.collected?fmtDL(p.collected):'date not detected')+' · '+p.values.length+' values'
+      +(nRaw?' · '+nRaw+' in an unfamiliar unit — kept as printed':'')+'</div>'+who+'</div>';
   }).join('');
   document.getElementById('sfFoot').innerHTML='<button id="sfFile" onclick="sfDoFile()">File '+oks.length+' report'+(oks.length>1?'s':'')+'</button>';
   sfFileReady();
@@ -2941,7 +2956,8 @@ async function sfDoFile(){
     await DB.put('reports',rep);RAW.reports.push(rep);
     for(const v of p.values){
       const rd={id:uid(),memberId,reportId:rep.id,marker:v.marker,value:v.value,
-        refLo:v.refLo,refHi:v.refHi,refText:v.refText,lab:p.clinic,clinic:p.clinic,dateISO:rep.dateISO};
+        refLo:v.refLo,refHi:v.refHi,refText:v.refText,lab:p.clinic,clinic:p.clinic,dateISO:rep.dateISO,
+        unitRaw:v.unitRaw||null};
       await DB.put('readings',rd);RAW.readings.push(rd);
     }
     results.push({memberId,count:p.values.length,newMember:a.mode==='new',rel:a.rel});
