@@ -511,8 +511,11 @@
   .sf-row.done .sf-bar,.sf-row.skip .sf-bar{display:none}
   .sf-row.skip{opacity:.45}
   /* confirm cards */
-  .cf-card{background:var(--bg-2);border:1px solid var(--hair);border-radius:10px;padding:14px 15px;margin-bottom:12px}
+  .cf-card{background:var(--bg-2);border:1px solid var(--hair);border-radius:10px;padding:14px 15px;margin-bottom:12px;transition:border-color .2s,background .2s}
+  .cf-card.needs{border-color:rgba(250,178,25,.6);background:rgba(250,178,25,.06);box-shadow:0 0 0 1px rgba(250,178,25,.25)}
   .cf-card h4{font-size:14px;font-weight:800}
+  .cf-alert{display:flex;align-items:center;gap:7px;margin:10px 0 2px;font-size:11.5px;font-weight:700;color:var(--warn)}
+  .cf-alert svg{width:15px;height:15px;stroke:var(--warn);fill:none;stroke-width:2;flex:0 0 auto}
   .cf-card .cf-sub{font-size:11px;color:var(--ink-3);margin-top:3px}
   .cf-who{display:flex;align-items:center;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--hair)}
   .cf-who .pav{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex:0 0 auto}
@@ -1678,12 +1681,11 @@ function chart(mk,mIdx,memberKey){
     const b=(mk.bands&&mk.bands[i]&&(mk.bands[i].lo!==undefined||mk.bands[i].hi!==undefined))?mk.bands[i]:band;
     return readingStatus(val,b,i===v.length-1,mk.flag);
   });
-  /* y-domain fits the data; band boundary included only when near the data */
+  /* y-domain always includes the FULL reference band so you can see where you sit within it */
   let lo=Math.min(...v),hi=Math.max(...v);
-  const span0=(hi-lo)||Math.abs(hi)*.15||1;
-  if(band.hi!==undefined&&Math.abs(band.hi-((lo+hi)/2))<=span0*2.2){lo=Math.min(lo,band.hi);hi=Math.max(hi,band.hi);}
-  if(band.lo!==undefined&&Math.abs(band.lo-((lo+hi)/2))<=span0*2.2){lo=Math.min(lo,band.lo);hi=Math.max(hi,band.lo);}
-  const pad=(hi-lo)*.18||1; lo-=pad; hi+=pad;
+  if(band.hi!==undefined){lo=Math.min(lo,band.hi);hi=Math.max(hi,band.hi);}
+  if(band.lo!==undefined){lo=Math.min(lo,band.lo);hi=Math.max(hi,band.lo);}
+  const pad=(hi-lo)*.14||Math.abs(hi)*.1||1; lo-=pad; hi+=pad;
   const W=300,H=118,L=34,R=8,TP=8,B=20;
   const X=f=>L+f*(W-L-R), Y=val=>TP+(1-(val-lo)/(hi-lo))*(H-TP-B);
   /* band rect clipped to domain */
@@ -3114,12 +3116,15 @@ function sfConfirm(){
   const oks=sfFiles.filter(f=>f.state==='ok');
   sfAssign=oks.map(f=>f.match?{mode:'match',memberId:f.match.id}:{mode:'new',rel:null});
   document.getElementById('sfTitle').textContent='Quick check';
-  document.getElementById('sfSub').textContent='Confirm who each report belongs to.';
+  const anyNew=oks.some(f=>!f.match);
+  document.getElementById('sfSub').textContent=anyNew
+    ? 'Confirm who each report belongs to, to move forward.'
+    : 'Confirm who each report belongs to.';
   document.getElementById('sfBody').innerHTML=oks.map((f,j)=>{
     const p=f.parsed;
     const sysN=[...new Set(p.values.map(v=>v.sys))].length;
     const panel=sysN>=3?'Full panel':(ZONES.find(z=>z.id===p.values[0].sys)||{name:'Lab'}).name+' panel';
-    let who;
+    let who,alert='';
     if(f.match){
       const mm=f.match;
       who='<div class="cf-who"><span class="pav av-g1">'+AVI(mm.name)+'</span>'
@@ -3127,6 +3132,7 @@ function sfConfirm(){
         +'<span class="cf-tag">Matched ✓</span></div>'
         +'<span class="cf-link" onclick="sfReassign('+j+')">Not right? Assign to someone else</span>';
     } else {
+      alert='<div class="cf-alert" id="cfAlert'+j+'"><svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>Action needed — tell us who this is</div>';
       who='<div class="cf-who"><span class="pav av-g2">'+AVI(p.name||'?')+'</span>'
         +'<div class="t"><b>'+(p.name||'Unknown name')+'</b><small>'+(p.dob?'DOB '+fmtDL(p.dob)+' · from the report':'DOB not detected')+'</small></div>'
         +'<span class="cf-tag" id="cfTag'+j+'">New person</span></div>'
@@ -3136,9 +3142,9 @@ function sfConfirm(){
         +'<span class="cf-link" onclick="sfReassign('+j+')">This is someone already in Klario</span>';
     }
     const nRaw=p.values.filter(v=>v.unitRaw).length;
-    return '<div class="cf-card"><h4>'+p.clinic+' · '+panel+'</h4>'
+    return '<div class="cf-card'+(f.match?'':' needs')+'" id="cfCard'+j+'"><h4>'+p.clinic+' · '+panel+'</h4>'
       +'<div class="cf-sub">'+(p.collected?fmtDL(p.collected):'date not detected')+' · '+p.values.length+' values'
-      +(nRaw?' · '+nRaw+' in an unfamiliar unit — kept as printed':'')+'</div>'+who+'</div>';
+      +(nRaw?' · '+nRaw+' in an unfamiliar unit — kept as printed':'')+'</div>'+alert+who+'</div>';
   }).join('');
   document.getElementById('sfFoot').innerHTML='<button id="sfFile" onclick="sfDoFile()">File '+oks.length+' report'+(oks.length>1?'s':'')+'</button>';
   sfFileReady();
@@ -3147,6 +3153,8 @@ function sfPickRel(j,btn,rel){
   sfAssign[j]={mode:'new',rel};
   document.querySelectorAll('#cfChips'+j+' button').forEach(b=>b.classList.toggle('on',b===btn));
   document.getElementById('cfTag'+j).textContent='Will be added · '+rel;
+  const card=document.getElementById('cfCard'+j);if(card)card.classList.remove('needs');
+  const al=document.getElementById('cfAlert'+j);if(al)al.remove();
   sfFileReady();
 }
 function sfReassign(j){
@@ -3163,7 +3171,10 @@ function sfConfirmRefresh(j,mem){
 }
 function sfFileReady(){
   const btn=document.getElementById('sfFile');if(!btn)return;
-  btn.disabled=sfAssign.some(a=>a.mode==='new'&&!a.rel);
+  const pending=sfAssign.filter(a=>a.mode==='new'&&!a.rel).length;
+  btn.disabled=pending>0;
+  const n=sfAssign.length;
+  btn.textContent=pending?('Confirm '+pending+' more to continue'):('File '+n+' report'+(n>1?'s':''));
 }
 async function sfDoFile(){
   const oks=sfFiles.filter(f=>f.state==='ok');
