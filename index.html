@@ -895,7 +895,7 @@
         <button class="set-row" onclick="applyTheme(!ISLIGHT)" id="appearanceRow">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/></svg>
           <div class="t"><b>Appearance</b><small id="setTheme">Dark</small></div><span class="chev">›</span></button>
-        <div style="text-align:center;font-size:10px;color:var(--ink-3);padding:16px 0 4px" id="verStamp">Klario v0.8.0 · build 2026-07-12g</div>
+        <div style="text-align:center;font-size:10px;color:var(--ink-3);padding:16px 0 4px" id="verStamp">Klario v0.8.1 · build 2026-07-12h</div>
       </div>
     </div>
 
@@ -1708,7 +1708,10 @@ function chart(mk,mIdx,memberKey){
   let lo=Math.min(...v),hi=Math.max(...v);
   if(band.hi!==undefined){lo=Math.min(lo,band.hi);hi=Math.max(hi,band.hi);}
   if(band.lo!==undefined){lo=Math.min(lo,band.lo);hi=Math.max(hi,band.lo);}
-  const pad=(hi-lo)*.14||Math.abs(hi)*.1||1; lo-=pad; hi+=pad;
+  /* one-sided band (e.g. "< 2.6" or "> 1.0"): open the healthy side so the green zone is clearly visible, not a thin sliver */
+  if(band.hi!==undefined&&band.lo===undefined){lo=Math.min(lo,band.hi-0.85*Math.max(hi-band.hi,(hi-lo)*0.25||1));if(lo<0&&band.hi>=0)lo=0;}
+  if(band.lo!==undefined&&band.hi===undefined){hi=Math.max(hi,band.lo+0.85*Math.max(band.lo-lo,(hi-lo)*0.25||1));}
+  const pad=(hi-lo)*.12||Math.abs(hi)*.1||1; lo-=pad; hi+=pad;
   const W=300,H=118,L=34,R=8,TP=8,B=20;
   const X=f=>L+f*(W-L-R), Y=val=>TP+(1-(val-lo)/(hi-lo))*(H-TP-B);
   /* band rect clipped to domain */
@@ -1731,7 +1734,17 @@ function chart(mk,mIdx,memberKey){
   const dots=pts.map((p,i)=>`
     <circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="4" fill="${DOT(sts[i])}" stroke="${th.dotStroke}" stroke-width="1.5"/>
     <circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="12" fill="transparent" style="cursor:pointer" class="dothit" data-mk="${mIdx}" data-i="${i}"/>`).join('');
-  const xlabels=rd.map((r,i)=>`<text x="${X(r.x).toFixed(1)}" y="${H-6}" text-anchor="${i===0?'start':(i===rd.length-1?'end':'middle')}" font-size="8" fill="${th.tick}">${r.d}</text>`).join('');
+  /* x-axis: only show date labels that are far enough apart to stay readable (dedupes clustered/duplicate dates) */
+  const firstPx=X(rd[0].x),lastPx=X(rd[rd.length-1].x),gap=(W-L-R)*0.2;
+  let runX=-1e9;
+  const xlabels=rd.map((r,i)=>{
+    const px=X(r.x);
+    const isEnd=i===0||i===rd.length-1;
+    const show=isEnd?true:(px-runX>=gap&&lastPx-px>=gap&&px-firstPx>=gap);
+    if(!show)return '';
+    runX=px;
+    return `<text x="${px.toFixed(1)}" y="${H-6}" text-anchor="${i===0?'start':(i===rd.length-1?'end':'middle')}" font-size="8" fill="${th.tick}">${r.d}</text>`;
+  }).join('');
   return {sts,svg:`<div class="chart"><svg viewBox="0 0 ${W} ${H}">
     ${bandRect}${ticks}${bandLines}
     <path d="${path}" fill="none" stroke="${th.line}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
