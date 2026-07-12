@@ -905,7 +905,7 @@
         <button class="set-row" onclick="applyTheme(!ISLIGHT)" id="appearanceRow">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/></svg>
           <div class="t"><b>Appearance</b><small id="setTheme">Dark</small></div><span class="chev">›</span></button>
-        <div style="text-align:center;font-size:10px;color:var(--ink-3);padding:16px 0 4px" id="verStamp">Klario v0.8.3 · build 2026-07-12j</div>
+        <div style="text-align:center;font-size:10px;color:var(--ink-3);padding:16px 0 4px" id="verStamp">Klario v0.8.4 · build 2026-07-12k</div>
       </div>
     </div>
 
@@ -2316,9 +2316,14 @@ function parseDateAny(s){
   m=s.match(/([A-Za-z]{3,9})[-\s]+(\d{1,2})[-\s,]+(\d{2,4})/);
   if(m){const mi=MON.findIndex(x=>m[1].toLowerCase().startsWith(x.toLowerCase()));
     if(mi>=0){let y=+m[3];if(y<100)y+=2000;return new Date(y,mi,+m[2]);}}
-  m=s.match(/(\d{4})-(\d{2})-(\d{2})/); if(m)return new Date(+m[1],+m[2]-1,+m[3]);
-  m=s.match(/(\d{1,2})[\/\.](\d{1,2})[\/\.](\d{2,4})/);
-  if(m){let y=+m[3];if(y<100)y+=2000;return new Date(y,+m[2]-1,+m[1]);}
+  m=s.match(/(\d{4})-(\d{1,2})-(\d{1,2})/); if(m)return new Date(+m[1],+m[2]-1,+m[3]);
+  /* numeric d/m/y — accept / . or - as separator; day-first (Indian/UK/UAE labs), swap if 2nd field can't be a month */
+  m=s.match(/(\d{1,2})[\/\.\-](\d{1,2})[\/\.\-](\d{2,4})/);
+  if(m){let a=+m[1],b=+m[2],y=+m[3];if(y<100)y+=2000;
+    let day=a,mon=b;                 // default day-first (Indian/UK/UAE labs)
+    if(b>12&&a<=12){day=b;mon=a;}     // 2nd field can't be a month → it's US MM-DD-YYYY
+    if(mon<1||mon>12||day<1||day>31)return null;
+    return new Date(y,mon-1,day);}
   return null;
 }
 const fmtD=d=>{d=new Date(d);return d.getDate()+' '+MON[d.getMonth()]+' '+String(d.getFullYear()).slice(2);};
@@ -2363,8 +2368,24 @@ const CLINICS=[
   {re:/\biqraa\b/i,name:'Iqraa'},{re:/\bnhs\b/i,name:'NHS'}
 ];
 function normNum(x){return parseFloat(String(x).replace(/,/g,''));}
+/* single source of truth for date extraction — used by parseReportLines AND the re-date migration */
+function extractReportDates(joined){
+  const out={dob:null,collected:null,reported:null,dateFound:false};
+  for(const t of joined){
+    if(!out.dob){const m=t.match(/(?:date of birth|d\.?o\.?b\.?)\s*[:\-]?\s*(.+)/i);
+      if(m){const d=parseDateAny(m[1]);if(d)out.dob=d.toISOString();}}
+    if(!out.collected){const m=t.match(/(?:sample collection date|collection date|collected at|collected on|collected|sample date|date of collection|date of receipt|received on|received|specimen date)\s*[:\-]?\s*(.+)/i);
+      if(m){const d=parseDateAny(m[1]);if(d&&d.getFullYear()>2000&&d<=new Date())out.collected=d.toISOString();}}
+    if(!out.reported){const m=t.match(/(?:reported on|report on|reported|reporting date|registered on|registration date|date of report)\s*[:\-]?\s*(.+)/i);
+      if(m){const d=parseDateAny(m[1]);if(d&&d.getFullYear()>2000&&d<=new Date())out.reported=d.toISOString();}}
+  }
+  if(!out.collected&&out.reported)out.collected=out.reported;
+  if(!out.collected){for(const t of joined){const d=parseDateAny(t);if(d&&d.getFullYear()>2000&&d<=new Date()&&d.toISOString()!==out.dob){out.collected=d.toISOString();break;}}}
+  out.dateFound=!!out.collected;
+  return out;
+}
 function parseReportLines(lines,fileName){
-  const out={name:null,dob:null,collected:null,clinic:null,values:[]};
+  const out={name:null,dob:null,collected:null,reported:null,dateFound:false,clinic:null,values:[]};
   const joined=lines.map(l=>l.txt);
   for(const t of joined){
     if(!out.name){const m=t.match(/^(?:patient(?:'s)?\s*)?name\s*[:\-]?\s*([A-Za-z][A-Za-z' .-]{2,58})/i);
@@ -2372,13 +2393,9 @@ function parseReportLines(lines,fileName){
         .replace(/\s+(sample|date|biological|clinic|report|order|specimen|collection|age|sex|gender|patient|dob|d\.?o\.?b|nhs|mrn|referred|ref|reference|doctor|consultant|hospital|department|institution|lab|test|result|status|accession|srd|urn|id|tel|phone|email|address|male|female).*/i,'')
         .replace(/\s+\d.*$/,'').replace(/[.\s]+$/,'').trim();
         if(nm.length>=3&&/[a-z]/i.test(nm)&&nm.split(/\s+/).length<=5)out.name=nm;}}
-    if(!out.dob){const m=t.match(/(?:date of birth|d\.?o\.?b\.?)\s*[:\-]?\s*(.+)/i);
-      if(m){const d=parseDateAny(m[1]);if(d)out.dob=d.toISOString();}}
-    if(!out.collected){const m=t.match(/(?:sample collection date|collection date|collected|sample date|date of receipt|specimen date)\s*[:\-]?\s*(.+)/i);
-      if(m){const d=parseDateAny(m[1]);if(d)out.collected=d.toISOString();}}
     if(!out.clinic){const c=CLINICS.find(c=>c.re.test(t));if(c)out.clinic=c.name;}
   }
-  if(!out.collected){for(const t of joined){const d=parseDateAny(t);if(d&&d.getFullYear()>2000&&d<=new Date()){out.collected=d.toISOString();break;}}}
+  {const dd=extractReportDates(joined);out.dob=dd.dob;out.collected=dd.collected;out.reported=dd.reported;out.dateFound=dd.dateFound;}
   if(!out.clinic)out.clinic=(fileName||'Lab report').replace(/[_-]/g,' ').replace(/\.pdf$/i,'').slice(0,24);
   const seen=new Set();
   for(let t of joined){
@@ -2469,6 +2486,32 @@ async function normalizeStored(){
   }
   if(n)await loadRaw();
   return n;
+}
+/* Re-date reports whose collection date was lost at ingest (older builds stamped the UPLOAD date).
+   Re-extracts the real date straight from each stored PDF and corrects the report + its readings. */
+async function redateStored(){
+  const VER='redate:v1';
+  if(typeof pdfjsLib==='undefined')return 0;        // PDF engine not ready — retry next boot
+  try{if(await DB.get('kv',VER))return 0;}catch(e){} // already run for this logic version
+  let fixed=0;
+  for(const rep of RAW.reports){
+    if(!rep.pdfBuf)continue;                       // no local PDF (cloud-only) — can't re-read here
+    try{
+      const blob=(rep.pdfBuf instanceof Blob)?rep.pdfBuf:new Blob([rep.pdfBuf]);
+      const lines=await extractPdfLines(blob);
+      const dd=extractReportDates(lines.map(l=>l.txt));
+      if(!dd.collected)continue;                    // still couldn't find a date — leave as-is
+      const newDay=dd.collected.slice(0,10), curDay=rep.dateISO?new Date(rep.dateISO).toISOString().slice(0,10):'';
+      if(newDay===curDay&&!rep.dateUnknown)continue; // already correct
+      rep.dateISO=dd.collected; rep.dateUnknown=false;
+      await DB.put('reports',rep);
+      for(const rd of RAW.readings){if(rd.reportId===rep.id){rd.dateISO=dd.collected;await DB.put('readings',rd);}}
+      fixed++;
+    }catch(e){console.error('[redate] failed for',rep.id,e);}
+  }
+  try{await DB.put('kv',{k:VER,v:new Date().toISOString(),fixed});}catch(e){}
+  if(fixed)await loadRaw();
+  return fixed;
 }
 
 /* ---------- status maths ---------- */
@@ -3326,7 +3369,7 @@ async function sfDoFile(){
     }
     const sysN=[...new Set(p.values.map(v=>v.sys))].length;
     const rep={id:uid(),memberId,clinic:p.clinic,panel:sysN>=3?'Full panel':(ZONES.find(z=>z.id===p.values[0].sys)||{name:'Lab'}).name+' panel',
-      dateISO:p.collected||new Date().toISOString(),fileName:f.file.name,pdfBuf:await f.file.arrayBuffer(),values:p.values.length};
+      dateISO:p.collected||new Date().toISOString(),dateUnknown:!p.collected,fileName:f.file.name,pdfBuf:await f.file.arrayBuffer(),values:p.values.length};
     await DB.put('reports',rep);RAW.reports.push(rep);
     for(const v of p.values){
       const rd={id:uid(),memberId,reportId:rep.id,marker:v.marker,value:v.value,
@@ -3397,6 +3440,7 @@ async function init(){
   await DB.open();
   await loadRaw();
   await normalizeStored();
+  try{const nd=await redateStored();if(nd)toast(nd+' report date'+(nd>1?'s':'')+' corrected from the original PDF');}catch(e){console.error('redate',e);}
   document.getElementById('sfInput').addEventListener('change',e=>{sfFilesChosen(e.target.files);e.target.value='';});
   if(RAW.profile){
     rebuildAll(0);
