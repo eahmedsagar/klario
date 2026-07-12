@@ -895,7 +895,7 @@
         <button class="set-row" onclick="applyTheme(!ISLIGHT)" id="appearanceRow">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/></svg>
           <div class="t"><b>Appearance</b><small id="setTheme">Dark</small></div><span class="chev">›</span></button>
-        <div style="text-align:center;font-size:10px;color:var(--ink-3);padding:16px 0 4px" id="verStamp">Klario v0.2.2 · real app</div>
+        <div style="text-align:center;font-size:10px;color:var(--ink-3);padding:16px 0 4px" id="verStamp">Klario v0.8.0 · build 2026-07-12g</div>
       </div>
     </div>
 
@@ -3420,30 +3420,40 @@ async function syncNow(){
   if(!CLOUD||!SESSION||SYNCING)return;
   SYNCING=true;setSyncUI('Syncing…');
   try{
-    /* PUSH: drain outbox */
+    /* PUSH: drain outbox — PARENTS BEFORE CHILDREN so foreign keys never fail */
+    const ORDER={members:0,reports:1,readings:2,notes:3,reminders:4};
     const kv=await DB.all('kv');
-    const jobs=kv.filter(x=>x.k&&x.k.startsWith('outbox:'));
+    const jobs=kv.filter(x=>x.k&&x.k.startsWith('outbox:'))
+      .sort((a,b)=>(ORDER[a.store]??9)-(ORDER[b.store]??9));
+    let lastErr=null;
     for(const j of jobs){
       const rec=await DB.get(j.store,j.id);
       if(rec){
-        if(j.store==='reports'&&(rec.pdfBuf||rec.blob)&&!rec.pdf_path){
-          const path=SESSION.user.id+'/'+rec.id+'.pdf';
-          const up=await SB.storage.from('reports').upload(path,repBlob(rec),{upsert:true,contentType:'application/pdf'});
-          if(!up.error){rec.pdf_path=path;await _put('reports',rec);
-            const i=RAW.reports.findIndex(x=>x.id===rec.id);if(i>=0)RAW.reports[i]=rec;}
-        }
-        const {error}=await SB.from(TABLES[j.store]).upsert(toRemote(j.store,rec));
+        try{
+          if(j.store==='reports'&&(rec.pdfBuf||rec.blob)&&!rec.pdf_path){
+            const path=SESSION.user.id+'/'+rec.id+'.pdf';
+            const up=await SB.storage.from('reports').upload(path,repBlob(rec),{upsert:true,contentType:'application/pdf'});
+            if(!up.error){rec.pdf_path=path;await _put('reports',rec);
+              const i=RAW.reports.findIndex(x=>x.id===rec.id);if(i>=0)RAW.reports[i]=rec;}
+          }
+          const {error}=await SB.from(TABLES[j.store]).upsert(toRemote(j.store,rec));
+          if(error)throw error;
+          await DB.del('kv',j.k);
+        }catch(e){lastErr=e;console.warn('sync push failed for',j.store,j.id,e&&(e.message||e));}
+      } else { await DB.del('kv',j.k); }
+    }
+    /* PUSH deletes: CHILDREN BEFORE PARENTS so nothing dangles */
+    const dels=kv.filter(x=>x.k&&x.k.startsWith('outboxdel:'))
+      .sort((a,b)=>(ORDER[b.store]??9)-(ORDER[a.store]??9));
+    for(const d of dels){
+      try{
+        const {error}=await SB.from(d.store).delete().eq('id',d.id);
         if(error)throw error;
-      }
-      await DB.del('kv',j.k);
+        if(d.store==='reports'&&d.pdf_path){try{await SB.storage.from('reports').remove([d.pdf_path]);}catch(e){}}
+        await DB.del('kv',d.k);
+      }catch(e){lastErr=e;console.warn('sync delete failed for',d.store,d.id,e&&(e.message||e));}
     }
-    /* PUSH deletes: drop rows (readings cascade) + remove stored PDF */
-    for(const d of kv.filter(x=>x.k&&x.k.startsWith('outboxdel:'))){
-      const {error}=await SB.from(d.store).delete().eq('id',d.id);
-      if(error)throw error;
-      if(d.store==='reports'&&d.pdf_path){try{await SB.storage.from('reports').remove([d.pdf_path]);}catch(e){}}
-      await DB.del('kv',d.k);
-    }
+    if(lastErr)throw lastErr;
     /* PULL: delta by updated_at */
     const lastRow=await DB.get('kv','lastSync');
     const since=lastRow?lastRow.v:'1970-01-01';

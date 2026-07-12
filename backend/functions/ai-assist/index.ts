@@ -8,7 +8,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const MODEL_FAST = "claude-haiku-4-5";      // parse fallback, tagging
-const MODEL_SMART = "claude-sonnet-4-5";    // doctor summary, insight prose
+const MODEL_SMART = "claude-sonnet-5";      // doctor summary, insight prose
 
 const PROMPTS: Record<string, (p: any) => { system: string; user: string; model: string; maxTokens: number }> = {
   parse: (p) => ({
