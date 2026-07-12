@@ -336,8 +336,10 @@
   .gp-card .t b{font-size:14.5px;font-weight:800;display:block}
   .gp-card .t small{font-size:11.5px;color:rgba(255,255,255,.75);line-height:1.4;display:block;margin-top:3px}
   .gp-card .go{margin-left:auto;font-size:18px;color:rgba(255,255,255,.7)}
-  .rrow{background:var(--bg-2);border:1px solid var(--hair);border-radius:16px;padding:14px;margin-bottom:9px;
-    display:flex;align-items:center;gap:12px;cursor:pointer}
+  .rrow{border-radius:16px;margin-bottom:9px;position:relative;overflow:hidden}
+  .rrow-in{background:var(--bg-2);border:1px solid var(--hair);border-radius:16px;padding:14px;
+    display:flex;align-items:center;gap:12px;cursor:pointer;position:relative;z-index:2;transition:transform .18s ease}
+  .rrow.swiped .rrow-in{transform:translateX(-96px)}
   .rrow .t{flex:1;min-width:0}
   .rrow .t b{font-size:13.5px;font-weight:700;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .rrow .t small{font-size:11px;color:var(--ink-3);display:block;margin-top:2px}
@@ -356,6 +358,19 @@
   .fbadge.na{background:rgba(255,255,255,.06);color:var(--ink-3)}
   .add-btn{width:100%;background:var(--bg-2);border:1px dashed var(--hair-2);border-radius:16px;padding:14px;
     color:var(--ink-2);font-size:13.5px;font-weight:700;cursor:pointer;margin-bottom:10px;font-family:inherit}
+  #addmem{position:absolute;inset:0;z-index:86;display:none;flex-direction:column;background:var(--bg)}
+  #addmem.on{display:flex}
+  #addmem .sf-body{padding-top:6px}
+  .add-first{display:block;margin:14px auto 0;background:var(--accent);color:#fff;border:none;
+    border-radius:999px;padding:12px 20px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit}
+  .rrow-del{position:absolute;top:0;right:0;bottom:0;width:96px;background:#c0442f;color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;z-index:1;
+    border:none;font-family:inherit;cursor:pointer;border-radius:16px}
+  .dup-banner{background:rgba(230,168,60,.12);border:1px solid rgba(230,168,60,.4);border-radius:14px;
+    padding:12px 14px;margin-bottom:12px;display:flex;gap:10px;align-items:center;cursor:pointer}
+  .dup-banner b{font-size:13px;font-weight:700;display:block}
+  .dup-banner small{font-size:11.5px;color:var(--ink-3)}
+  .dup-banner .go{margin-left:auto;color:var(--accent-2);font-weight:700;font-size:12.5px}
   .con-row{background:var(--bg-2);border:1px solid var(--hair);border-radius:18px;padding:14px;margin-bottom:10px;
     display:flex;gap:13px;align-items:flex-start}
   .con-row .t{flex:1;min-width:0}
@@ -696,7 +711,7 @@
 
     <!-- REPORTS -->
     <div class="screen" id="scr-reports">
-      <div class="scr-h"><h1>Reports</h1><p>10 reports · auto-named from clinic & panel</p></div>
+      <div class="scr-h"><h1>Reports</h1><p id="repSub">auto-named from clinic &amp; panel</p></div>
       <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
         <input id="reportsSearch" placeholder="Search reports, clinics, values…"></div>
       <div class="tlwrap" id="tlReports"></div>
@@ -915,6 +930,25 @@
     <div class="sf-foot" id="sfFoot"></div>
   </div>
 
+  <div id="addmem">
+    <div class="sf-head">
+      <button class="sf-x" onclick="closeAddMember()">✕</button>
+      <h1>Add family member</h1>
+      <p>Create their profile now — add their reports whenever you like.</p>
+    </div>
+    <div class="sf-body">
+      <div class="field"><label>Name</label><input id="amName" placeholder="e.g. Shezah" autocomplete="off"></div>
+      <div class="field"><label>Date of birth</label><input id="amDob" type="date"></div>
+      <div class="field"><label>Sex at birth</label>
+        <div class="seg" id="amSex"><button data-v="Male" onclick="amPick(this,'#amSex')">Male</button><button data-v="Female" onclick="amPick(this,'#amSex')">Female</button><button data-v="Other" onclick="amPick(this,'#amSex')">Other</button></div>
+      </div>
+      <div class="field"><label>Relationship to you</label>
+        <div class="cf-chips" id="amRel" style="margin-top:7px"><button onclick="amPick(this,'#amRel')">Partner</button><button onclick="amPick(this,'#amRel')">Child</button><button onclick="amPick(this,'#amRel')">Parent</button><button onclick="amPick(this,'#amRel')">Sibling</button><button onclick="amPick(this,'#amRel')">Other</button></div>
+      </div>
+    </div>
+    <div class="sf-foot"><button id="amSave" onclick="addMemberSave()">Add member</button></div>
+  </div>
+
   <input type="file" id="sfInput" multiple accept="application/pdf,image/*" style="display:none">
   <div id="toast"></div>
 </div>
@@ -1032,6 +1066,79 @@ const MARKERS = {
 const ALIAS_LIST = Object.entries(MARKERS)
   .flatMap(([name,m])=>m.al.map(a=>({a,name})))
   .sort((x,y)=>y.a.length-x.a.length);
+
+/* ============ cross-lab UNIT NORMALISATION ============
+   Different clinics report the same marker in different units (UK mmol/L vs
+   US mg/dL, HbA1c % vs mmol/mol, …). We convert every reading — and its
+   printed reference range — to the marker's ONE canonical unit so charts,
+   trends and comparisons are apples-to-apples. */
+function normU(u){return String(u||'').toLowerCase().replace(/µ/g,'u').replace(/\s+/g,'').replace(/litre|liter/g,'l');}
+function rndv(v){if(v==null||!isFinite(v))return v;const a=Math.abs(v);if(a>=100)return Math.round(v);if(a>=10)return Math.round(v*10)/10;return Math.round(v*100)/100;}
+function refFmt(lo,hi){
+  if(lo!=null&&hi!=null)return rndv(lo)+' – '+rndv(hi);
+  if(hi!=null)return '< '+rndv(hi);
+  if(lo!=null)return '> '+rndv(lo);
+  return '—';
+}
+/* per-marker: alternate printed unit → factor (printed × factor = canonical).
+   'affine' handles HbA1c (% ↔ mmol/mol). hi/lo = magnitude past which a value
+   with NO printed unit is inferred to be in the (only) alternate unit, because
+   it would be physiologically impossible in the canonical unit. */
+const UCONV={
+  'Total Cholesterol':   {u:{'mg/dl':0.02586}, hi:20},
+  'LDL Cholesterol':     {u:{'mg/dl':0.02586}, hi:20},
+  'HDL Cholesterol':     {u:{'mg/dl':0.02586}, hi:8},
+  'Non-HDL Cholesterol': {u:{'mg/dl':0.02586}, hi:20},
+  'Triglycerides':       {u:{'mg/dl':0.01129}, hi:20},
+  'Glucose':             {u:{'mg/dl':0.05551}},
+  'Creatinine':          {u:{'mg/dl':88.42},   lo:15},
+  'Urea':                {u:{'mg/dl':0.357}},
+  'Uric Acid':           {u:{'mg/dl':59.48},   lo:40},
+  'Bilirubin':           {u:{'mg/dl':17.1}},
+  'Bilirubin (Direct)':  {u:{'mg/dl':17.1}},
+  'Iron':                {u:{'ug/dl':0.1791}},
+  'Vitamin D':           {u:{'ng/ml':2.496}},
+  'Vitamin B12':         {u:{'pmol/l':1.355}},
+  'Folate':              {u:{'nmol/l':0.4416}},
+  'Insulin':             {u:{'uiu/ml':6.945,'miu/l':6.945}},
+  'C-peptide':           {u:{'nmol/l':3.021}},
+  'Ferritin':            {u:{'ng/ml':1}},
+  'hs-CRP':              {u:{'mg/dl':10}},
+  'HbA1c':               {u:{'%':'affine'}, affine:[10.929,-23.5], lo:25}
+};
+const UNIT_RE=/(mg\s*\/\s*dl|mmol\s*\/\s*mol|mmol\s*\/\s*l|[µu]mol\s*\/\s*l|g\s*\/\s*dl|g\s*\/\s*l|ng\s*\/\s*ml|ng\s*\/\s*l|pg\s*\/\s*ml|nmol\s*\/\s*l|pmol\s*\/\s*l|[µu]g\s*\/\s*dl|[µu]g\s*\/\s*l|[µu]iu\s*\/\s*ml|miu\s*\/\s*l|iu\s*\/\s*l|mu\s*\/\s*l|u\s*\/\s*l|mm\s*\/\s*hr|ml\s*\/\s*min|%)/i;
+function applyConv(v,factor,aff){
+  if(v==null||!isFinite(v))return v;
+  if(factor==='affine')return v*aff[0]+aff[1];
+  return v*factor;
+}
+/* Convert one reading to canonical units. printedU = normalised unit token seen
+   on the row (or null). refFromPdf = the ref range came from the report (so it's
+   in the same printed unit as the value). Returns null when no change is needed. */
+function normalizeReading(name,value,refLo,refHi,printedU,refFromPdf){
+  const md=MARKERS[name],cfg=UCONV[name];
+  if(!md||!cfg)return null;
+  const canon=normU(md.unit);const aff=cfg.affine||null;
+  let factor=null,inferred=false;
+  if(printedU&&printedU!==canon){
+    if(cfg.u[printedU]!==undefined)factor=cfg.u[printedU];
+    else return null;                 // unknown alt unit — don't guess
+  } else if(!printedU){
+    const alt=cfg.u[Object.keys(cfg.u)[0]];
+    if(cfg.hi!=null&&value>cfg.hi){factor=alt;inferred=true;}
+    else if(cfg.lo!=null&&value<cfg.lo&&value>0){factor=alt;inferred=true;}
+  }
+  if(factor==null)return null;
+  const inAlt=x=>(cfg.hi!=null&&x>cfg.hi)||(cfg.lo!=null&&x>0&&x<cfg.lo);
+  const gate=inferred||!!aff;          // when inferring (or affine markers) only convert a ref that is itself in the alt scale — guards mixed-unit rows
+  const nv=rndv(applyConv(value,factor,aff));
+  let nlo=refLo,nhi=refHi;
+  if(refFromPdf){
+    if(refLo!=null&&(!gate||inAlt(refLo)))nlo=rndv(applyConv(refLo,factor,aff));
+    if(refHi!=null&&(!gate||inAlt(refHi)))nhi=rndv(applyConv(refHi,factor,aff));
+  }
+  return {value:nv,refLo:nlo,refHi:nhi,refText:refFmt(nlo,nhi)};
+}
 
 /* ================= helpers ================= */
 document.getElementById('samplerAdult').innerHTML = ADULT;
@@ -1215,10 +1322,10 @@ MEMBERS.forEach((m,i)=>{
       </div>
       <div class="who-cap"><h2>${m.name}</h2><span class="asof">${m.asof}</span></div>
     </div>
-    <div class="insight" data-stories="${m.key}">
+    ${m.hasData?`<div class="insight" data-stories="${m.key}">
       <span class="dot ${m.insight.cls}"></span><p>${m.insight.html}</p>
       ${(STORIES[m.key]&&STORIES[m.key].length>1)?`<span class="more">+${STORIES[m.key].length-1} more</span>`:'<span class="go">›</span>'}
-    </div>
+    </div>`:`<button class="add-first" onclick="scanStart(false)">+ Add ${m.name}’s first report</button>`}
     <div class="dots">${MEMBERS.map((_,j)=>`<i class="${j===i?'on':''}"></i>`).join('')}</div>`;
   track.appendChild(p);
   panes.push(p.querySelector('.pane'));
@@ -1226,7 +1333,7 @@ MEMBERS.forEach((m,i)=>{
     el.addEventListener('click',ev=>{ev.stopPropagation();openSheet(m.key,el.dataset.sys);});
   });
   const ins=p.querySelector('.insight');
-  ins.addEventListener('click',()=>{
+  if(ins)ins.addEventListener('click',()=>{
     if(m.baby||!(STORIES[m.key]&&STORIES[m.key].length)) toast(m.baby?'Add a report to start Kai\'s insights':'No open insights');
     else openStories(m.key);
   });
@@ -2089,30 +2196,58 @@ function parseReportLines(lines,fileName){
     const rest=t.slice(low.indexOf(hit.a)+hit.a.length);
     const nums=[...rest.matchAll(/-?\d[\d,]*\.?\d*/g)].map(m=>({v:normNum(m[0]),i:m.index,raw:m[0]}));
     if(!nums.length)continue;
-    const value=nums[0].v;
+    let value=nums[0].v;
     if(!isFinite(value))continue;
-    let refLo,refHi,refText=null;
+    let refLo,refHi,refText=null,refFromPdf=false;
     const restAfterVal=rest.slice(nums[0].i+nums[0].raw.length);
+    const um=restAfterVal.match(UNIT_RE)||rest.match(UNIT_RE);
+    let printedU=um?normU(um[1]):null;
     const printedFlag=(restAfterVal.match(/(?:^|\s)(H|L)(?:\s|$)/)||[])[1]||null;
     let rm=restAfterVal.match(/(\d[\d,]*\.?\d*)\s*[–—-]\s*(\d[\d,]*\.?\d*)/);
-    if(rm){refLo=normNum(rm[1]);refHi=normNum(rm[2]);refText=refLo+' – '+refHi;}
-    else{rm=restAfterVal.match(/<\s*(\d[\d,]*\.?\d*)/);if(rm){refHi=normNum(rm[1]);refText='< '+refHi;}
-      else{rm=restAfterVal.match(/>\s*(\d[\d,]*\.?\d*)/);if(rm){refLo=normNum(rm[1]);refText='> '+refLo;}
+    if(rm){refLo=normNum(rm[1]);refHi=normNum(rm[2]);refText=refLo+' – '+refHi;refFromPdf=true;}
+    else{rm=restAfterVal.match(/<\s*(\d[\d,]*\.?\d*)/);if(rm){refHi=normNum(rm[1]);refText='< '+refHi;refFromPdf=true;}
+      else{rm=restAfterVal.match(/>\s*(\d[\d,]*\.?\d*)/);if(rm){refLo=normNum(rm[1]);refText='> '+refLo;refFromPdf=true;}
       else{
         const rn=[...restAfterVal.matchAll(/\d[\d,]*\.?\d*/g)].map(m=>normNum(m[0])).filter(isFinite);
-        if(rn.length>=2){refLo=rn[0];refHi=rn[1];refText=refLo+' – '+refHi;}
+        if(rn.length>=2){refLo=rn[0];refHi=rn[1];refText=refLo+' – '+refHi;refFromPdf=true;}
         else if(rn.length===1){
           if(printedFlag==='H'||(!printedFlag&&value<rn[0])){refHi=rn[0];refText='< '+refHi;}
           else{refLo=rn[0];refText='> '+refLo;}
+          refFromPdf=true;
         }
       }}}
     const md=MARKERS[hit.name];
-    if(refLo===undefined&&refHi===undefined){refLo=md.lo;refHi=md.hi;
+    if(refLo===undefined&&refHi===undefined){refLo=md.lo;refHi=md.hi;refFromPdf=false;
       refText=(refLo!==undefined&&refHi!==undefined)?refLo+' – '+refHi:(refHi!==undefined?'< '+refHi:(refLo!==undefined?'> '+refLo:'—'));}
+    /* normalise cross-lab units to this marker's canonical unit */
+    const nz=normalizeReading(hit.name,value,refLo,refHi,printedU,refFromPdf);
+    if(nz){value=nz.value;refLo=nz.refLo;refHi=nz.refHi;refText=nz.refText;}
     seen.add(hit.name);
     out.values.push({marker:hit.name,value,unit:md.unit,refLo,refHi,refText,sys:md.sys});
   }
   return out;
+}
+
+/* one-off (idempotent) repair of readings saved before unit-normalisation:
+   infer the alternate unit purely from an impossible canonical magnitude and
+   fix the value + any ref endpoints that are themselves in the alternate scale. */
+async function normalizeStored(){
+  let n=0;
+  for(const r of RAW.readings){
+    const cfg=UCONV[r.marker];if(!cfg)continue;
+    const alt=cfg.u[Object.keys(cfg.u)[0]],aff=cfg.affine||null;
+    const hiHit=cfg.hi!=null&&r.value>cfg.hi;
+    const loHit=cfg.lo!=null&&r.value<cfg.lo&&r.value>0;
+    if(!hiHit&&!loHit)continue;
+    const bad=x=>(cfg.hi!=null&&x>cfg.hi)||(cfg.lo!=null&&x>0&&x<cfg.lo);
+    r.value=rndv(applyConv(r.value,alt,aff));
+    if(r.refLo!=null&&bad(r.refLo))r.refLo=rndv(applyConv(r.refLo,alt,aff));
+    if(r.refHi!=null&&bad(r.refHi))r.refHi=rndv(applyConv(r.refHi,alt,aff));
+    r.refText=refFmt(r.refLo,r.refHi);
+    await DB.put('readings',r);n++;
+  }
+  if(n)await loadRaw();
+  return n;
 }
 
 /* ---------- status maths ---------- */
@@ -2322,16 +2457,41 @@ function renderTimelines(){
     dots.forEach(d=>d.addEventListener('click',()=>{all.classList.remove('on');dots.forEach(x=>x.classList.toggle('on',x===d));cb(d.dataset.d);}));
   });
 }
+/* likely-duplicate detection: same member + same day + clinic + panel + value count.
+   Returns a Set of the EXTRA report ids (the earliest of each group is kept). */
+function dupExtras(memberKey){
+  const reps=RAW.reports.filter(r=>r.memberId===memberKey);
+  const groups={};
+  reps.forEach(r=>{
+    const day=new Date(r.dateISO); const dk=isNaN(day)?'?':day.toISOString().slice(0,10);
+    const k=[dk,(r.clinic||'').toLowerCase().trim(),r.panel,r.values].join('|');
+    (groups[k]=groups[k]||[]).push(r);
+  });
+  const extras=new Set();
+  Object.values(groups).forEach(g=>{
+    if(g.length<2)return;
+    g.sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+    g.slice(1).forEach(r=>extras.add(r.id));
+  });
+  return extras;
+}
 function renderReports(){
   const m=MEMBERS[typeof idx==='number'?idx:0];if(!m)return;
   const reps=RAW.reports.filter(r=>r.memberId===m.key).sort((a,b)=>new Date(b.dateISO)-new Date(a.dateISO))
     .filter(r=>!SEL_DATE||fmtTL(r.dateISO)===SEL_DATE);
+  const dups=dupExtras(m.key);
   const body=document.getElementById('reportsBody');
   let html='';
   if(m.hasData){
     html+='<div class="gp-card" onclick="openDoctorSummary(MEMBERS[idx].key)">'
       +'<div class="t"><b>Summary for Doctor</b><small>One shareable page for '+m.name+' — open flags, recent results and notes worth mentioning.</small></div>'
       +'<span class="go">›</span></div>';
+  }
+  if(dups.size){
+    html+='<div class="dup-banner" onclick="toast(\'The likely duplicates are marked below — tap Delete on any copy you don’t want\')">'
+      +'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#e6a83c" stroke-width="2"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V4h12"/></svg>'
+      +'<div><b>'+dups.size+' possible duplicate'+(dups.size>1?'s':'')+'</b><small>Same date, clinic, panel &amp; value count</small></div>'
+      +'<span class="go">Review ›</span></div>';
   }
   if(!reps.length){
     html+='<div class="empty-hint">'+(SEL_DATE?'No '+m.name+' reports on this date.':'No reports for '+m.name+' yet.<br>Tap + to scan the first — PDF, photo or file.')+'</div>';
@@ -2340,12 +2500,50 @@ function renderReports(){
     reps.forEach(r=>{
       const y=String(new Date(r.dateISO).getFullYear());
       if(y!==year&&!SEL_DATE){year=y;html+='<div class="sec-label">'+y+'</div>';}
-      html+='<div class="rrow" onclick="openReportById(\''+r.id+'\')">'
+      const isDup=dups.has(r.id);
+      html+='<div class="rrow'+(isDup?' swiped':'')+'" data-id="'+r.id+'">'
+        +'<button class="rrow-del" onclick="deleteReport(\''+r.id+'\',event)">Delete</button>'
+        +'<div class="rrow-in" onclick="rrowTap(\''+r.id+'\',event)">'
         +'<div class="t"><b>'+r.clinic+' · '+r.panel+'</b><small>'+fmtDL(r.dateISO)+' · '+r.values+' values saved</small></div>'
-        +'<span class="mtag">'+m.name+'</span><span class="chev">›</span></div>';
+        +(isDup?'<span class="mtag" style="color:#e6a83c;border-color:rgba(230,168,60,.5)">Duplicate</span>':'<span class="mtag">'+m.name+'</span>')
+        +'<span class="chev">›</span></div></div>';
     });
   }
   body.innerHTML=html;
+  wireSwipe(body);
+  const sub=document.getElementById('repSub');
+  if(sub)sub.textContent=reps.length?(reps.length+' report'+(reps.length>1?'s':'')+' · '+m.name):'auto-named from clinic & panel';
+}
+function rrowTap(id,ev){
+  const row=ev&&ev.currentTarget&&ev.currentTarget.closest('.rrow');
+  if(row&&row.classList.contains('swiped')){row.classList.remove('swiped');return;}
+  openReportById(id);
+}
+function wireSwipe(container){
+  container.querySelectorAll('.rrow').forEach(row=>{
+    let x0=null,y0=null,dx=0,drag=false;
+    const s=(x,y)=>{x0=x;y0=y;dx=0;drag=false;};
+    const mv=(x,y)=>{if(x0==null)return;dx=x-x0;if(Math.abs(dx)>8&&Math.abs(dx)>Math.abs(y-y0))drag=true;};
+    const en=()=>{if(x0==null)return;if(drag){if(dx<-38)row.classList.add('swiped');else if(dx>38)row.classList.remove('swiped');}x0=null;};
+    row.addEventListener('touchstart',ev=>s(ev.touches[0].clientX,ev.touches[0].clientY),{passive:true});
+    row.addEventListener('touchmove',ev=>mv(ev.touches[0].clientX,ev.touches[0].clientY),{passive:true});
+    row.addEventListener('touchend',en);
+    row.addEventListener('mousedown',ev=>s(ev.clientX,ev.clientY));
+    row.addEventListener('mousemove',ev=>{if(x0!=null)mv(ev.clientX,ev.clientY);});
+    row.addEventListener('mouseup',en);
+    row.addEventListener('mouseleave',en);
+  });
+}
+async function deleteReport(id,ev){
+  if(ev){ev.stopPropagation();}
+  const rep=RAW.reports.find(r=>r.id===id);if(!rep)return;
+  for(const rd of RAW.readings.filter(r=>r.reportId===id)){await DB.del('readings',rd.id);}
+  await DB.del('reports',id);
+  if(CLOUD){await _put('kv',{k:'outboxdel:reports:'+id,store:'reports',id,
+    pdf_path:rep.pdf_path||(SESSION?SESSION.user.id+'/'+id+'.pdf':null),t:Date.now()});
+    if(typeof scheduleSync==='function')scheduleSync();}
+  await loadRaw();rebuildAll();
+  toast('Report removed');
 }
 function renderDiary(){
   const m=MEMBERS[typeof idx==='number'?idx:0];if(!m)return;
@@ -2382,11 +2580,35 @@ function renderFamily(){
         +'<div class="t"><b>'+m.fullName+'</b><small>'+(m.relation||'Self')+(ageOf(m.dob)!==null?' · '+(m.baby?Math.max(1,Math.round((new Date()-new Date(m.dob))/2628e6))+' months':ageOf(m.dob)):'')+'</small></div>'
         +badge+'</div>';
     }).join('')
-    +'<button class="add-btn" onclick="toast(\'Just scan their report — Klario creates the profile from the name on it\')">+ Add family member</button>'
+    +'<button class="add-btn" onclick="openAddMember()">+ Add family member</button>'
     +'<div class="sec-label">Connected sources</div>'
     +'<div class="con-row" style="cursor:pointer" onclick="showScreen(\'connect\')">'
     +'<div class="t"><b>Devices & apps</b><small>Wearables & Apple Health — coming in a later version</small></div>'
     +'<span class="chev" style="margin-top:10px">›</span></div>';
+}
+/* ---------- add a family member directly (no report needed) ---------- */
+function amPick(btn,sel){document.querySelectorAll(sel+' button').forEach(b=>b.classList.toggle('on',b===btn));}
+function openAddMember(){
+  document.getElementById('amName').value='';
+  document.getElementById('amDob').value='';
+  document.querySelectorAll('#amSex button,#amRel button').forEach(b=>b.classList.remove('on'));
+  document.getElementById('addmem').classList.add('on');
+  setTimeout(()=>document.getElementById('amName').focus(),60);
+}
+function closeAddMember(){document.getElementById('addmem').classList.remove('on');}
+async function addMemberSave(){
+  const name=document.getElementById('amName').value.trim();
+  if(!name){toast('Give them a name first');return;}
+  const dob=document.getElementById('amDob').value;
+  const sex=(document.querySelector('#amSex button.on')||{}).dataset;
+  const rel=(document.querySelector('#amRel button.on')||{}).dataset;
+  const m={id:uid(),name,dob:dob?new Date(dob).toISOString():null,sex:sex?sex.v:null,
+    relation:rel?rel.v:'Other',isSelf:false,createdAt:Date.now()};
+  await DB.put('members',m);await loadRaw();rebuildAll();
+  closeAddMember();
+  const i=MEMBERS.findIndex(x=>x.key===m.id);
+  if(i>=0)goHomeMember(i);else showScreen('home');
+  toast(firstName(name)+' added — add their first report anytime');
 }
 function renderSettings(){
   const p=RAW.profile;if(!p)return;
@@ -2783,6 +3005,7 @@ async function init(){
   try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();}catch(e){}
   await DB.open();
   await loadRaw();
+  await normalizeStored();
   document.getElementById('sfInput').addEventListener('change',e=>{sfFilesChosen(e.target.files);e.target.value='';});
   if(RAW.profile){
     rebuildAll(0);
@@ -2860,6 +3083,13 @@ async function syncNow(){
         if(error)throw error;
       }
       await DB.del('kv',j.k);
+    }
+    /* PUSH deletes: drop rows (readings cascade) + remove stored PDF */
+    for(const d of kv.filter(x=>x.k&&x.k.startsWith('outboxdel:'))){
+      const {error}=await SB.from(d.store).delete().eq('id',d.id);
+      if(error)throw error;
+      if(d.store==='reports'&&d.pdf_path){try{await SB.storage.from('reports').remove([d.pdf_path]);}catch(e){}}
+      await DB.del('kv',d.k);
     }
     /* PULL: delta by updated_at */
     const lastRow=await DB.get('kv','lastSync');
