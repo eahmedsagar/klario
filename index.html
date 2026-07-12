@@ -922,7 +922,7 @@
           <svg viewBox="0 0 24 24"><path d="M12 3l2.2 5.6L20 10l-5 3.5L16.5 20 12 16.5 7.5 20 9 13.5 4 10l5.8-1.4z"/></svg>
           <div class="t"><b>Test Klario AI</b><small>Check the AI connection & see any error</small></div><span class="chev">›</span></button>
         <div id="aiTestOut" style="display:none;font-size:12px;line-height:1.5;color:var(--ink-2);background:var(--bg-2);border:1px solid var(--hair);border-radius:12px;padding:12px 14px;margin:2px 0 8px;word-break:break-word"></div>
-        <div style="text-align:center;font-size:10px;color:var(--ink-3);padding:16px 0 4px" id="verStamp">Klario v0.9.5 · build 2026-07-12v</div>
+        <div style="text-align:center;font-size:10px;color:var(--ink-3);padding:16px 0 4px" id="verStamp">Klario v0.9.6 · build 2026-07-12w</div>
       </div>
     </div>
 
@@ -3027,7 +3027,7 @@ function renderDiary(){
     }
     h+='<div class="en-meta"><span class="en-d">'+(n.photoBuf?camSvg:'')+fmtDL(n.dateISO)+(n.where?' · '+n.where:(n.source&&n.source!=='typed'?' · '+n.source:''))+'</span>'
       +(n.type==='pending'?'<span class="en-shim">Reading…</span>':(n.type!=='ask'?'<span class="en-tag">'+(DTYPE[t]||'Note')+'</span>':''))
-      +(n.remindDue?'<span class="en-remind" onclick="event.stopPropagation();toast(\'Reminder set · '+n.remindDue+'\')">Remind · '+n.remindDue+'</span>':(n.autoMeta?'<span class="en-tag" style="border-style:dashed">'+n.autoMeta+'</span>':''))
+      +(n.remindDue?'<span class="en-remind" onclick="event.stopPropagation();toast(\'Reminder set · '+fmtDL(n.remindDue)+'\')">Remind · '+fmtDL(n.remindDue)+'</span>':(n.autoMeta?'<span class="en-tag" style="border-style:dashed">'+n.autoMeta+'</span>':''))
       +(n.sysTag?'<span class="en-tag">'+n.sysTag+'</span>':'')
       +'</div></div></div>';
   });
@@ -3719,7 +3719,10 @@ async function syncNow(){
         const local=await DB.get(store,r.id);
         if(!local||new Date(r.updated_at)>new Date(local.updated_at||0)){
           const merged=fromRemote(store,r);
-          if(store==='reports'&&local){if(local.pdfBuf)merged.pdfBuf=local.pdfBuf;if(local.blob)merged.blob=local.blob;}
+          /* CRITICAL: the remote projection only carries a subset of columns. Preserve every
+             local-only field (reminders, note type/photo, refFromPdf, needsReview, dateUnknown, …)
+             so a pull can never strip data the cloud table doesn't store. */
+          if(local)for(const k in local){if(!(k in merged))merged[k]=local[k];}
           await _put(store,merged);changed=true;
         }
       }
