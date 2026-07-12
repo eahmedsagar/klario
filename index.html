@@ -1091,7 +1091,7 @@ const MARKERS = {
   'Potassium':        {sys:'kidney', unit:'mmol/L',  al:['potassium','k'], lo:3.5, hi:5.3},
   'Chloride':         {sys:'kidney', unit:'mmol/L',  al:['chloride'], lo:95, hi:108},
   'Uric Acid':        {sys:'kidney', unit:'µmol/L',  al:['uric acid','urate'], lo:200, hi:430},
-  'Glucose':          {sys:'metab',  unit:'mmol/L',  al:['glucose','fasting glucose','blood glucose'], lo:4.0, hi:6.0},
+  'Glucose':          {sys:'metab',  unit:'mmol/L',  al:['fasting blood sugar','fasting glucose','blood glucose','blood sugar','glucose','fbs'], lo:4.0, hi:6.0},
   'HbA1c':            {sys:'metab',  unit:'mmol/mol',al:['hba1c','glycated haemoglobin','glycated hemoglobin'], hi:42},
   'Insulin':          {sys:'metab',  unit:'pmol/L',  al:['insulin'], lo:17.8, hi:173},
   'C-peptide':        {sys:'metab',  unit:'ng/ml',   al:['c-peptide','c peptide'], lo:1.1, hi:4.4},
@@ -1103,8 +1103,15 @@ const MARKERS = {
   'Folate':           {sys:'brain',  unit:'µg/L',    al:['folate','folic acid'], lo:3.9}
 };
 /* alias lookup, longest alias first so "ldl cholesterol" wins over "cholesterol" */
+/* punctuation-tolerant, line-anchored matcher: an alias may sit at the start of a
+   line after ≤4 leading non-letters, with any punctuation (hyphens, commas, spaces)
+   BETWEEN its words — so "APOLIPOPROTEIN - B" still matches "apolipoprotein b". */
+function aliasRx(a){
+  const body=a.replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/\s+/g,'[^a-z0-9]{1,3}');
+  return new RegExp('^[^a-z]{0,4}'+body+'(?![a-z0-9])','i');
+}
 const ALIAS_LIST = Object.entries(MARKERS)
-  .flatMap(([name,m])=>m.al.map(a=>({a,name})))
+  .flatMap(([name,m])=>m.al.map(a=>({a,name,rx:aliasRx(a)})))
   .sort((x,y)=>y.a.length-x.a.length);
 
 /* ============ cross-lab UNIT NORMALISATION ============
@@ -1112,7 +1119,11 @@ const ALIAS_LIST = Object.entries(MARKERS)
    US mg/dL, HbA1c % vs mmol/mol, …). We convert every reading — and its
    printed reference range — to the marker's ONE canonical unit so charts,
    trends and comparisons are apples-to-apples. */
-function normU(u){return String(u||'').toLowerCase().replace(/µ/g,'u').replace(/\s+/g,'').replace(/litre|liter/g,'l');}
+function normU(u){
+  let n=String(u||'').toLowerCase().replace(/[µμ]/g,'u').replace(/\s+/g,'').replace(/litre|liter/g,'l');
+  const syn={'miu/l':'mu/l','iu/l':'u/l','uiu/ml':'mu/l','miu/ml':'mu/l'};  // international-unit equivalences (µIU/mL = mIU/L = mU/L)
+  return syn[n]||n;
+}
 function rndv(v){if(v==null||!isFinite(v))return v;const a=Math.abs(v);if(a>=100)return Math.round(v);if(a>=10)return Math.round(v*10)/10;return Math.round(v*100)/100;}
 function refFmt(lo,hi){
   if(lo!=null&&hi!=null)return rndv(lo)+' – '+rndv(hi);
@@ -1144,9 +1155,15 @@ const UCONV={
   'C-peptide':           {u:{'nmol/l':3.021}},
   'Ferritin':            {u:{'ng/ml':1}},
   'hs-CRP':              {u:{'mg/dl':10}},
+  'Haemoglobin':         {u:{'g/l':0.1}},   // g/L → g/dL
+  'MCHC':                {u:{'g/dl':10}},   // g/dL → g/L
+  'Albumin':             {u:{'g/dl':10}},
+  'Total Protein':       {u:{'g/dl':10}},
+  'Apolipoprotein B':    {u:{'g/l':100}},   // g/L → mg/dL
+  'Apolipoprotein A-I':  {u:{'g/l':100}},
   'HbA1c':               {u:{'%':'affine'}, affine:[10.929,-23.5], lo:25}
 };
-const UNIT_RE=/(mg\s*\/\s*dl|mmol\s*\/\s*mol|mmol\s*\/\s*l|[µu]mol\s*\/\s*l|g\s*\/\s*dl|g\s*\/\s*l|ng\s*\/\s*ml|ng\s*\/\s*l|pg\s*\/\s*ml|nmol\s*\/\s*l|pmol\s*\/\s*l|[µu]g\s*\/\s*dl|[µu]g\s*\/\s*l|[µu]iu\s*\/\s*ml|miu\s*\/\s*l|iu\s*\/\s*l|mu\s*\/\s*l|u\s*\/\s*l|mm\s*\/\s*hr|ml\s*\/\s*min|%)/i;
+const UNIT_RE=/(mg\s*\/\s*dl|mg\s*\/\s*l|mmol\s*\/\s*mol|mmol\s*\/\s*l|[µμu]mol\s*\/\s*l|g\s*\/\s*dl|g\s*\/\s*l|ng\s*\/\s*ml|ng\s*\/\s*l|pg\s*\/\s*ml|nmol\s*\/\s*l|pmol\s*\/\s*l|[µμu]g\s*\/\s*dl|[µμu]g\s*\/\s*l|[µμu]iu\s*\/\s*ml|miu\s*\/\s*ml|miu\s*\/\s*l|iu\s*\/\s*l|mu\s*\/\s*l|u\s*\/\s*l|mm\s*\/\s*hr|ml\s*\/\s*min|%)/i;
 function applyConv(v,factor,aff){
   if(v==null||!isFinite(v))return v;
   if(factor==='affine')return v*aff[0]+aff[1];
@@ -2209,20 +2226,36 @@ async function extractPdfLines(file){
   }
   return lines;
 }
-const CLINICS=['Randox','Nuffield','Mediclinic','Bupa','Spire','Synnovis','Synlab','The Doctors Laboratory','TDL','LabCorp','Quest','American Hospital','Cleveland Clinic','NHS','HCA','King’s College','Medcare','Aster'];
+/* whole-word matches only — 'reQUESTed' must not become "Quest" */
+const CLINICS=[
+  {re:/\brandox\b/i,name:'Randox Health'},
+  {re:/\bmediclinic\b/i,name:'Mediclinic'},
+  {re:/\bagilus\b|\bpathlabs\b/i,name:'Agilus Pathlabs'},
+  {re:/\bddrc\b/i,name:'DDRC SRL'},
+  {re:/\bnuffield\b/i,name:'Nuffield'},
+  {re:/\bsynnovis\b/i,name:'Synnovis'},{re:/\bsynlab\b/i,name:'Synlab'},
+  {re:/the doctors laboratory|\btdl\b/i,name:'TDL'},{re:/\blabcorp\b/i,name:'LabCorp'},
+  {re:/\bquest diagnostics\b/i,name:'Quest Diagnostics'},
+  {re:/\bbupa\b/i,name:'Bupa'},{re:/\bspire\b/i,name:'Spire'},
+  {re:/american hospital/i,name:'American Hospital'},{re:/cleveland clinic/i,name:'Cleveland Clinic'},
+  {re:/\bmedcare\b/i,name:'Medcare'},{re:/\baster\b/i,name:'Aster'},{re:/king.s college/i,name:'King’s College'},
+  {re:/\biqraa\b/i,name:'Iqraa'},{re:/\bnhs\b/i,name:'NHS'}
+];
 function normNum(x){return parseFloat(String(x).replace(/,/g,''));}
 function parseReportLines(lines,fileName){
   const out={name:null,dob:null,collected:null,clinic:null,values:[]};
   const joined=lines.map(l=>l.txt);
   for(const t of joined){
-    if(!out.name){const m=t.match(/^(?:patient\s*)?name\s*[:\-]\s*([A-Za-z' .-]{3,40})/i);
-      if(m&&!/lab|clinic|doctor|test/i.test(m[1])){
-        out.name=m[1].replace(/\s+(sample|date|biological|clinic|report|order|specimen|collection|age|sex|gender|patient|dob|d\.?o\.?b|nhs|mrn|ref|id|tel|phone|email|address).*/i,'').replace(/\s+\d.*$/,'').trim();}}
+    if(!out.name){const m=t.match(/^(?:patient(?:'s)?\s*)?name\s*[:\-]?\s*([A-Za-z][A-Za-z' .-]{2,58})/i);
+      if(m){const nm=m[1]
+        .replace(/\s+(sample|date|biological|clinic|report|order|specimen|collection|age|sex|gender|patient|dob|d\.?o\.?b|nhs|mrn|referred|ref|reference|doctor|consultant|hospital|department|institution|lab|test|result|status|accession|srd|urn|id|tel|phone|email|address|male|female).*/i,'')
+        .replace(/\s+\d.*$/,'').replace(/[.\s]+$/,'').trim();
+        if(nm.length>=3&&/[a-z]/i.test(nm)&&nm.split(/\s+/).length<=5)out.name=nm;}}
     if(!out.dob){const m=t.match(/(?:date of birth|d\.?o\.?b\.?)\s*[:\-]?\s*(.+)/i);
       if(m){const d=parseDateAny(m[1]);if(d)out.dob=d.toISOString();}}
     if(!out.collected){const m=t.match(/(?:sample collection date|collection date|collected|sample date|date of receipt|specimen date)\s*[:\-]?\s*(.+)/i);
       if(m){const d=parseDateAny(m[1]);if(d)out.collected=d.toISOString();}}
-    if(!out.clinic){const c=CLINICS.find(c=>t.toLowerCase().includes(c.toLowerCase()));if(c)out.clinic=c+(c==='Randox'?' Health':'');}
+    if(!out.clinic){const c=CLINICS.find(c=>c.re.test(t));if(c)out.clinic=c.name;}
   }
   if(!out.collected){for(const t of joined){const d=parseDateAny(t);if(d&&d.getFullYear()>2000&&d<=new Date()){out.collected=d.toISOString();break;}}}
   if(!out.clinic)out.clinic=(fileName||'Lab report').replace(/[_-]/g,' ').replace(/\.pdf$/i,'').slice(0,24);
@@ -2230,14 +2263,10 @@ function parseReportLines(lines,fileName){
   for(let t of joined){
     t=t.replace(/\b10\^?\d+\s*\/?\s*l\b/gi,' ').replace(/\b10\*\d+\b/g,' ');
     const low=t.toLowerCase();
-    const hit=ALIAS_LIST.find(({a})=>{
-      const i=low.indexOf(a);
-      if(i<0||i>2)return false;
-      const after=low[i+a.length];
-      return after===undefined||!/[a-z]/.test(after);
-    });
+    let hit=null,mEnd=0;
+    for(const it of ALIAS_LIST){const mm=low.match(it.rx);if(mm){hit=it;mEnd=mm[0].length;break;}}
     if(!hit||seen.has(hit.name))continue;
-    const rest=t.slice(low.indexOf(hit.a)+hit.a.length);
+    const rest=t.slice(mEnd);
     const md=MARKERS[hit.name];
     const loOnly=md.lo!==undefined&&md.hi===undefined;   // higher-is-better / lower-bound marker (e.g. HDL, eGFR, vit D)
     const hiOnly=md.hi!==undefined&&md.lo===undefined;   // upper-bound-only marker (e.g. LDL, cholesterol)
@@ -2249,13 +2278,18 @@ function parseReportLines(lines,fileName){
     const restAfterVal=rest.slice(nums[0].i+nums[0].raw.length);
     const um=restAfterVal.match(UNIT_RE)||rest.match(UNIT_RE);
     let printedU=um?normU(um[1]):null;
+    /* "gm%" / "g%" is the archaic gram-percent = g/dL; a "%" on a gram-unit marker (Hb, MCHC…) is never a real percentage */
+    if(printedU==='%'&&/g\/d?l/.test(normU(md.unit)))printedU='g/dl';
     const printedFlag=(restAfterVal.match(/(?:^|\s)(H|L)(?:\s|$)/)||[])[1]||null;
-    let rm=restAfterVal.match(/(\d[\d,]*\.?\d*)\s*[–—-]\s*(\d[\d,]*\.?\d*)/);
+    /* drop AGE ranges ("18 - 60 yrs :") so they aren't mistaken for the reference range */
+    let refZone=restAfterVal.replace(/\d+\s*[-–—]\s*\d+\s*(?:yrs?|years?|y|mo|months?)\b\s*:?/gi,' ')
+                            .replace(/\bage\b[^:]*:/gi,' ');
+    let rm=refZone.match(/(\d[\d,]*\.?\d*)\s*[–—-]\s*(\d[\d,]*\.?\d*)/);
     if(rm){refLo=normNum(rm[1]);refHi=normNum(rm[2]);refFromPdf=true;}
-    else{rm=restAfterVal.match(/<\s*(\d[\d,]*\.?\d*)/);if(rm){refHi=normNum(rm[1]);refFromPdf=true;}
-      else{rm=restAfterVal.match(/>\s*(\d[\d,]*\.?\d*)/);if(rm){refLo=normNum(rm[1]);refFromPdf=true;}
+    else{rm=refZone.match(/<\s*(\d[\d,]*\.?\d*)/);if(rm){refHi=normNum(rm[1]);refFromPdf=true;}
+      else{rm=refZone.match(/>\s*(\d[\d,]*\.?\d*)/);if(rm){refLo=normNum(rm[1]);refFromPdf=true;}
       else{
-        const rn=[...restAfterVal.matchAll(/\d[\d,]*\.?\d*/g)].map(m=>normNum(m[0])).filter(isFinite);
+        const rn=[...refZone.matchAll(/\d[\d,]*\.?\d*/g)].map(m=>normNum(m[0])).filter(isFinite);
         if(rn.length>=2){refLo=rn[0];refHi=rn[1];refFromPdf=true;}
         else if(rn.length===1){
           /* single reference number → place it using the marker's known direction */
@@ -2279,9 +2313,10 @@ function parseReportLines(lines,fileName){
     /* normalise cross-lab units to this marker's canonical unit */
     const nz=normalizeReading(hit.name,value,refLo,refHi,printedU,refFromPdf);
     if(nz){value=nz.value;refLo=nz.refLo;refHi=nz.refHi;refText=nz.refText;}
-    /* unconvertible unit? keep as printed but FLAG it so Ahmed can see & report it */
+    /* unconvertible unit? keep as printed but FLAG it so Ahmed can see & report it.
+       Skip dimensionless markers (ratios) — a stray "%" next to them isn't a real unit. */
     let unitRaw=null;
-    if(!nz&&printedU&&printedU!==normU(md.unit)
+    if(!nz&&printedU&&md.unit&&printedU!==normU(md.unit)
        &&!(UCONV[hit.name]&&UCONV[hit.name].u[printedU]!==undefined)){
       unitRaw=um?um[1].replace(/\s+/g,''):printedU;
     }
