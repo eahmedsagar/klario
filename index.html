@@ -851,6 +851,16 @@
         <button class="dv-add" onclick="addNote()">Add</button>
       </div>
       <input type="file" id="dvPhoto" accept="image/*" capture="environment" style="display:none" onchange="if(this.files[0])diaryPhotoChosen(this.files[0]);this.value='';">
+      <input type="file" id="dvUpload" accept="image/*,application/pdf" style="display:none" onchange="if(this.files[0])diaryPhotoChosen(this.files[0]);this.value='';">
+      <div id="capMenu" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.5)" onclick="if(event.target===this)closeCapMenu()">
+        <div style="position:absolute;left:14px;right:14px;bottom:14px;display:flex;flex-direction:column;gap:8px">
+          <div style="background:#1a212c;border-radius:16px;overflow:hidden">
+            <button onclick="capPick('cam')" style="display:block;width:100%;padding:16px;background:none;border:none;border-bottom:1px solid rgba(255,255,255,.07);color:#2dd4bf;font-size:16px;font-weight:600">Take Photo</button>
+            <button onclick="capPick('up')" style="display:block;width:100%;padding:16px;background:none;border:none;color:#2dd4bf;font-size:16px;font-weight:600">Upload Photo / File</button>
+          </div>
+          <button onclick="closeCapMenu()" style="width:100%;padding:16px;background:#1a212c;border:none;border-radius:16px;color:#fff;font-size:16px;font-weight:600">Cancel</button>
+        </div>
+      </div>
       <div class="dv-vrow"><div class="vtog"><button class="on" data-v="cards" onclick="diaryView('cards',this)">Cards</button><button data-v="table" onclick="diaryView('table',this)">Table</button></div></div>
       <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
         <input id="diarySearch" placeholder="Search notes, prescriptions, documents…" oninput="renderDiary()"></div>
@@ -895,7 +905,7 @@
         <button class="set-row" onclick="applyTheme(!ISLIGHT)" id="appearanceRow">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/></svg>
           <div class="t"><b>Appearance</b><small id="setTheme">Dark</small></div><span class="chev">›</span></button>
-        <div style="text-align:center;font-size:10px;color:var(--ink-3);padding:16px 0 4px" id="verStamp">Klario v0.8.2 · build 2026-07-12i</div>
+        <div style="text-align:center;font-size:10px;color:var(--ink-3);padding:16px 0 4px" id="verStamp">Klario v0.8.3 · build 2026-07-12j</div>
       </div>
     </div>
 
@@ -2522,7 +2532,7 @@ function rebuildWorld(){
       const mx=t=>m1===m0?0.5:((+new Date(t)-m0)/(m1-m0));
       const mk={
         name,val:String(last.value),unit:md.unit,flag:fl,
-        ref:last.refText||'—',
+        ref:last.refText||'—',lastISO:last.dateISO,
         band:{lo:last.refLo!==undefined&&last.refLo!==null?last.refLo:undefined,
               hi:last.refHi!==undefined&&last.refHi!==null?last.refHi:undefined},
         hist:rs.map(r=>r.value),
@@ -2561,27 +2571,35 @@ function rebuildWorld(){
     const noteFor=zid=>{const zn=ZONES.find(z=>z.id===zid).name;
       const n=notes.find(n=>n.sysTag===zn);return n?{date:fmtD(n.dateISO).replace(/ \d\d$/,''),txt:n.text.slice(0,60)+(n.text.length>60?'…':'')}:null;};
     const mkList=zid=>(sysMarkers[zid]||[]).filter(m=>m.flag!=='ok');
+    const mref=m=>(m.ref&&m.ref!=='—')?', ref '+m.ref:'';
+    const ageAgo=iso=>{if(!iso)return '';const then=new Date(iso),now=new Date();
+      let mo=(now.getFullYear()-then.getFullYear())*12+(now.getMonth()-then.getMonth());
+      if(now.getDate()<then.getDate())mo--;
+      if(mo<1){const d=Math.max(0,Math.round((now-then)/864e5));if(d<=1)return 'this week';if(d<14)return d+' days ago';return Math.round(d/7)+' weeks ago';}
+      if(mo<12)return mo+' month'+(mo>1?'s':'')+' ago';
+      const y=Math.floor(mo/12),rem=mo%12;return y+' year'+(y>1?'s':'')+(rem?' '+rem+' mo':'')+' ago';};
+    const lastTested=mks=>{const iso=mks.map(m=>m.lastISO).filter(Boolean).sort().pop();return iso?' Last tested '+ageAgo(iso)+'.':'';};
     if(attS.includes('cardio')){
       const sys=['cardio'];if(attS.includes('inflam'))sys.push('inflam');
       const mks=sys.flatMap(mkList);
       stories.push({status:'att',head:'Your heart story needs attention',
         teaser:mks.length+' marker'+(mks.length>1?'s':'')+' flagged — '+mks[0].name.replace(' Cholesterol','')+' leads.',
-        body:mks.slice(0,4).map(m=>m.name+' '+m.val+' ('+({hi:'high',lo:'low',dr:'drifting'}[m.flag])+')').join(', ')+
-          (mks.length>4?' and more':'')+'. '+(sys.length>1?'Lipids and inflammation moved together — one conversation for your doctor.':'Worth a doctor conversation.'),
+        body:mks.slice(0,4).map(m=>m.name+' '+m.val+' ('+({hi:'high',lo:'low',dr:'drifting'}[m.flag])+mref(m)+')').join(', ')+
+          (mks.length>4?' and more':'')+'. '+(sys.length>1?'Lipids and inflammation moved together — one conversation for your doctor.':'Worth a doctor conversation.')+lastTested(mks),
         systems:sys,primary:'cardio',note:noteFor('cardio')});
     }
     attS.filter(s=>s!=='cardio'&&!(s==='inflam'&&attS.includes('cardio'))).forEach(zid=>{
       const z=ZONES.find(z=>z.id===zid);const mks=mkList(zid);
       stories.push({status:'att',head:z.name+' needs attention',
         teaser:mks[0].name+' '+mks[0].val+({hi:' (high)',lo:' (low)'}[mks[0].flag]||'')+(mks.length>1?' +'+(mks.length-1)+' more':'')+'.',
-        body:mks.slice(0,4).map(m=>m.name+' '+m.val+' ('+({hi:'high',lo:'low'}[m.flag]||'off')+')').join(', ')+'.',
+        body:mks.slice(0,4).map(m=>m.name+' '+m.val+' ('+({hi:'high',lo:'low'}[m.flag]||'off')+mref(m)+')').join(', ')+'.'+lastTested(mks),
         systems:[zid],primary:zid,note:noteFor(zid)});
     });
     watchS.forEach(zid=>{
       const z=ZONES.find(z=>z.id===zid);const mks=(sysMarkers[zid]||[]).filter(m=>m.flag==='dr');
       stories.push({status:'watch',head:(mks[0]?mks[0].name:z.name)+' drifting',
         teaser:'Still in range, but moving one way across tests.',
-        body:'Still in range, but moving the same direction across recent tests — a recheck would settle it.',
+        body:'Still in range, but moving the same direction across recent tests — a recheck would settle it.'+lastTested(mks),
         systems:[zid],primary:zid,note:noteFor(zid)});
     });
     STORIES[mem.id]=stories;
@@ -2874,7 +2892,9 @@ function renderDiary(){
 function diaryView(v,btn){DIARY_VIEW=v;document.querySelectorAll('#scr-journal .vtog button').forEach(b=>b.classList.toggle('on',b===btn));renderDiary();}
 function diaryFilter(btn){DIARY_FILTER=btn.dataset.f;document.querySelectorAll('#dvChips button').forEach(b=>b.classList.toggle('on',b===btn));renderDiary();}
 /* ---------- photo capture ---------- */
-function diaryCapture(){document.getElementById('dvPhoto').click();}
+function diaryCapture(){document.getElementById('capMenu').style.display='block';}
+function closeCapMenu(){document.getElementById('capMenu').style.display='none';}
+function capPick(k){closeCapMenu();document.getElementById(k==='cam'?'dvPhoto':'dvUpload').click();}
 async function diaryPhotoChosen(file){
   const m=MEMBERS[idx];if(!m){toast('Finish setup first');return;}
   const buf=await file.arrayBuffer();
