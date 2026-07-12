@@ -3508,6 +3508,33 @@ async function aiRescueParse(parsed){
   }
   return parsed;
 }
+/* SECOND ENGINE: independently ask the AI to read the same report, then compare.
+   Where the deterministic parser and the AI DISAGREE on a value, that's exactly the
+   'confidently wrong' case → flag it for review. Returns true if the AI actually ran. */
+async function aiCrossCheck(parsed,text){
+  if(!CLOUD||!SESSION||!CFG.AI_ENABLED||!parsed.values.length)return false;
+  const out=await aiAssist('parse',{text:text||window.KLARIO_LAST_TEXT});
+  if(!out||!Array.isArray(out.values))return false;
+  const aiByMarker={};
+  out.values.forEach(v=>{
+    if(typeof v.value!=='number')return;
+    const hit=ALIAS_LIST.find(it=>it.rx.test(String(v.marker||'').toLowerCase())||String(v.marker||'').toLowerCase().includes(it.a));
+    if(hit)aiByMarker[hit.name]=v.value;
+  });
+  const near=(a,b)=>{const m=Math.max(Math.abs(a),Math.abs(b),1e-9);return Math.abs(a-b)/m<=0.12;};
+  parsed.values.forEach(pv=>{
+    const av=aiByMarker[pv.marker];
+    if(av==null)return;
+    let agree=near(av,pv.value);                 // AI may use a different unit — accept any known conversion
+    if(!agree){const cfg=UCONV[pv.marker];
+      if(cfg)for(const f of Object.values(cfg.u)){if(f!=='affine'&&(near(av*f,pv.value)||near(av,pv.value*f))){agree=true;break;}}}
+    if(!agree){
+      pv.warn=pv.warn||[];if(!pv.warn.includes('ai-disagree'))pv.warn.push('ai-disagree');
+      pv.conf=Math.min(pv.conf!=null?pv.conf:1,0.4);pv.needsReview=true;pv.aiValue=av;
+    }
+  });
+  return true;
+}
 /* richer prose after each rebuild (fills in over the template text) */
 async function aiNarrate(){
   const m=MEMBERS[idx];if(!m||!m.hasData)return;
@@ -3670,9 +3697,10 @@ const _sfProcess=sfProcess;
 sfProcess=async function(i){
   await _sfProcess(i);
   const f=sfFiles[i];
-  if(f&&f.state==='err'&&f.file.type.includes('pdf')&&CLOUD&&SESSION){
+  if(!f||!f.file.type.includes('pdf')||!CLOUD||!SESSION)return;
+  const st=document.getElementById('sfs'+i);
+  if(f.state==='err'){
     /* try AI rescue on unparseable PDFs */
-    const st=document.getElementById('sfs'+i);
     st.innerHTML='Trying Klario AI…';
     try{
       const lines=await extractPdfLines(f.file);
@@ -3689,6 +3717,17 @@ sfProcess=async function(i){
         const a=row.querySelector('.sf-actions');if(a)a.remove();
       } else st.innerHTML='Couldn’t read this one, even with AI.';
     }catch(e){st.innerHTML='Couldn’t read this one, even with AI.';}
+    sfReady();
+  } else if(f.state==='ok'&&f.parsed&&CFG.AI_ENABLED){
+    /* SECOND ENGINE: cross-check the parser's values against an independent AI read */
+    const prev=st.innerHTML;
+    st.innerHTML='Double-checking with Klario AI…';
+    try{
+      const lines=await extractPdfLines(f.file);
+      const ran=await aiCrossCheck(f.parsed,lines.map(l=>l.txt).join('\n'));
+      const nrev=f.parsed.values.filter(v=>v.needsReview).length;
+      st.innerHTML=prev+(ran?(nrev?' · '+nrev+' to double-check':' · AI-verified ✓'):'');
+    }catch(e){st.innerHTML=prev;}
     sfReady();
   }
 };
