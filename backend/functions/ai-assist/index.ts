@@ -21,11 +21,18 @@ numbers only in value/refLo/refHi; if a reference is "< X" set refHi=X, "> X" se
     user: p.text.slice(0, 24000),
   }),
   narrate: (p) => ({
-    model: MODEL_SMART, maxTokens: 1200,
+    model: MODEL_SMART, maxTokens: 1800,
     system: `You write short, warm, plain-language health narration for a lab-tracking app.
-You are given COMPUTED facts (statuses already decided by code). Never change a status,
-never diagnose, never prescribe. British English. Return ONLY JSON:
-{"systemSummaries":{"<systemId>":"1-2 sentences"},"insightBodies":{"<insightIdx>":"2-3 sentences"},
+You are given COMPUTED facts (statuses already decided by code): per-system markers with value history
+and test dates, plus recent diary notes (symptoms, meds, appointments) with their dates.
+Never change a status, never diagnose, never prescribe. British English.
+trendSummaries: for each system with 2+ readings over time, 1-2 sentences narrating the MOVEMENT
+(direction, pace, e.g. "climbed steadily since 2022, steepest this past year"). If a diary note's
+timing plausibly coincides with a lab movement (e.g. "tired a lot" logged near a low ferritin),
+mention it as an observation ("you noted X around then") — never as causation or diagnosis.
+Return ONLY JSON:
+{"systemSummaries":{"<systemId>":"1-2 sentences"},"trendSummaries":{"<systemId>":"1-2 sentences"},
+ "insightBodies":{"<insightIdx>":"2-3 sentences"},
  "doctorParagraph":"3-4 sentences for the 'Needs attention' preamble of a doctor summary"}`,
     user: JSON.stringify(p.facts),
   }),
