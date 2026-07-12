@@ -895,7 +895,7 @@
         <button class="set-row" onclick="applyTheme(!ISLIGHT)" id="appearanceRow">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/></svg>
           <div class="t"><b>Appearance</b><small id="setTheme">Dark</small></div><span class="chev">›</span></button>
-        <div style="text-align:center;font-size:10px;color:var(--ink-3);padding:16px 0 4px" id="verStamp">Klario v0.8.1 · build 2026-07-12h</div>
+        <div style="text-align:center;font-size:10px;color:var(--ink-3);padding:16px 0 4px" id="verStamp">Klario v0.8.2 · build 2026-07-12i</div>
       </div>
     </div>
 
@@ -2515,6 +2515,11 @@ function rebuildWorld(){
       const md=MARKERS[name];if(!md)return;
       const fl=markerFlag(rs);
       const last=rs[rs.length-1];
+      /* spread THIS marker's own readings across the full chart width (left→right by its own dates),
+         not squeezed into the corner of the member's entire history */
+      const mt=rs.map(r=>+new Date(r.dateISO));
+      const m0=Math.min(...mt),m1=Math.max(...mt);
+      const mx=t=>m1===m0?0.5:((+new Date(t)-m0)/(m1-m0));
       const mk={
         name,val:String(last.value),unit:md.unit,flag:fl,
         ref:last.refText||'—',
@@ -2522,7 +2527,7 @@ function rebuildWorld(){
               hi:last.refHi!==undefined&&last.refHi!==null?last.refHi:undefined},
         hist:rs.map(r=>r.value),
         bands:rs.map(r=>({lo:(r.refLo!==undefined&&r.refLo!==null)?r.refLo:undefined,hi:(r.refHi!==undefined&&r.refHi!==null)?r.refHi:undefined})),
-        rd:rs.map(r=>({d:fmtD(r.dateISO),lab:r.lab||r.clinic||'Lab',x:xOf(r.dateISO),reportId:r.reportId,ref:r.refText}))
+        rd:rs.map(r=>({d:fmtD(r.dateISO),lab:r.lab||r.clinic||'Lab',x:mx(r.dateISO),reportId:r.reportId,ref:r.refText}))
       };
       (sysMarkers[md.sys]=sysMarkers[md.sys]||[]).push(mk);
     });
