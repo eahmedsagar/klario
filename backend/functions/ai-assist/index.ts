@@ -30,12 +30,22 @@ never diagnose, never prescribe. British English. Return ONLY JSON:
     user: JSON.stringify(p.facts),
   }),
   tag: (p) => ({
-    model: MODEL_FAST, maxTokens: 300,
-    system: `Classify a personal health diary note. Systems: Cardiovascular, Blood, Inflammation, Liver,
-Kidneys, Metabolic, Thyroid, Brain & Nerves, Lungs, Musculoskeletal, Other.
-Return ONLY JSON: {"sysTag":string,"isReminder":boolean,"reminderTitle":string|null,
-"dueInMonths":number|null,"autoMeta":string|null}`,
-    user: p.text.slice(0, 2000),
+    model: MODEL_FAST, maxTokens: 400,
+    system: `Classify a personal health diary note (it may be dictated speech, so tolerate rambling/filler).
+Systems: Cardiovascular, Blood, Inflammation, Liver, Kidneys, Metabolic, Thyroid, Brain & Nerves, Lungs, Musculoskeletal, Other.
+"kind" is one of: symptom, pain, medication, appointment, measurement, reminder, note.
+If the note implies a future action (recheck, book, appointment, take/refill meds, follow-up), set isReminder=true, write a short reminderTitle, and set dueISO to the best YYYY-MM-DD date. Resolve relative dates ("next Tuesday", "in 3 months", "tomorrow") against TODAY (given). If only a rough horizon is known, also give dueInMonths.
+Clean the note into a tidy one-line "autoMeta" summary. Never diagnose or prescribe.
+Return ONLY JSON: {"sysTag":string,"kind":string,"isReminder":boolean,"reminderTitle":string|null,
+"dueISO":"YYYY-MM-DD"|null,"dueInMonths":number|null,"autoMeta":string|null}`,
+    user: JSON.stringify({ today: p.today || null, note: String(p.text || "").slice(0, 2000) }),
+  }),
+  ask: (p) => ({
+    model: MODEL_SMART, maxTokens: 900,
+    system: `You are Klario, a calm, plain-language health companion. Answer the user's question using ONLY the DATA provided (their own lab results, computed statuses, trends and diary notes).
+Hard rules: never invent values, dates or facts that are not in the data; if the data doesn't contain the answer, say so plainly; the clinical statuses in the data were decided by code — do not overrule them; NEVER diagnose, prescribe, or give personalised medical advice — explain what the numbers mean and suggest discussing specifics with their doctor; be warm and concise (2-6 sentences); British English.
+Return ONLY JSON: {"answer": string, "sources": [string]} where each source names a specific reading or note you relied on, e.g. "LDL Cholesterol · Randox · 1 Apr 2026".`,
+    user: JSON.stringify({ question: String(p.question || "").slice(0, 800), data: p.data }),
   }),
 };
 
