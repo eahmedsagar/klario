@@ -905,7 +905,7 @@
         <button class="set-row" onclick="applyTheme(!ISLIGHT)" id="appearanceRow">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/></svg>
           <div class="t"><b>Appearance</b><small id="setTheme">Dark</small></div><span class="chev">›</span></button>
-        <div style="text-align:center;font-size:10px;color:var(--ink-3);padding:16px 0 4px" id="verStamp">Klario v0.8.5 · build 2026-07-12l</div>
+        <div style="text-align:center;font-size:10px;color:var(--ink-3);padding:16px 0 4px" id="verStamp">Klario v0.8.6 · build 2026-07-12m</div>
       </div>
     </div>
 
@@ -1422,9 +1422,8 @@ function renderBody(m){
 
 /* labels + leader lines (all statuses, colour-coded) */
 function labelsAndLines(m){
-  if(m.baby) return {pills:'',lines:''};
   const sides={l:[],r:[]};
-  ZONES.forEach(s=>{
+  zonesFor(m).forEach(s=>{
     const st=m.status[s.id]; if(!st||st==='nodata') return;
     const ay = s.type==='rim' ? s.ly : s.z.cy;
     sides[s.side].push({s,ay,st});
@@ -1890,15 +1889,12 @@ function openStories(mKey){
   pill.className='status-pill'; pill.style.display='none';
   let html='';
   list.forEach((s,i)=>{
-    const chips=s.systems.map(sy=>{
-      const z=ZONES.find(z=>z.id===sy);
-      return `<span class="sys-chip ${member.status[sy]||'nodata'}">${z.name}</span>`;
-    }).join('');
+    /* system chips removed — the heading already names the system (redundant) */
     const note=s.note?`<span class="note-chip">Diary · ${s.note.date}: "${s.note.txt}"</span>`:'';
     html+=`<button class="story ${s.status}" data-i="${i}">
       <div class="story-top"><span class="sdot ${s.status}"></span><b>${s.head}</b></div>
       <p class="story-b">${s.body}</p>
-      <div class="story-foot">${chips}${note}<span class="story-go">${s.diaryOnly?'Open diary':'View results'} ›</span></div>
+      <div class="story-foot">${note}<span class="story-go">${s.diaryOnly?'Open diary':'View results'} ›</span></div>
     </button>`;
   });
   const body=document.getElementById('shBody');
@@ -3686,13 +3682,22 @@ openOriginalPdf=async function(rid){
 };
 
 /* ---------- AI assist (graceful no-op when unavailable) ---------- */
+window.KLARIO_AI_ERR='';
 async function aiAssist(task,payload){
-  if(!CLOUD||!SESSION||!CFG.AI_ENABLED)return null;
+  if(!CLOUD||!SESSION||!CFG.AI_ENABLED){KLARIO_AI_ERR=!CFG.AI_ENABLED?'AI disabled in config':(!SESSION?'not signed in':'offline');return null;}
   try{
     const {data,error}=await SB.functions.invoke('ai-assist',{body:{task,payload}});
-    if(error)return null;
+    if(error){
+      let detail='';
+      try{const b=error.context&&error.context.json?await error.context.json():null;
+        if(b&&b.error)detail=b.error+(b.status?' '+b.status:'')+(b.detail?': '+String(b.detail).slice(0,120):'');}catch(_){}
+      KLARIO_AI_ERR=detail||error.message||'request failed';
+      console.error('[ai-assist]',task,'→',KLARIO_AI_ERR);
+      return null;
+    }
+    KLARIO_AI_ERR='';
     return data;
-  }catch(e){return null;}
+  }catch(e){KLARIO_AI_ERR=String(e&&e.message||e);console.error('[ai-assist]',task,e);return null;}
 }
 /* parse fallback: rescue documents the local parser barely read */
 const _parseReportLines=parseReportLines;
@@ -3942,7 +3947,8 @@ sfProcess=async function(i){
       const lines=await extractPdfLines(f.file);
       const ran=await aiCrossCheck(f.parsed,lines.map(l=>l.txt).join('\n'));
       const nrev=f.parsed.values.filter(v=>v.needsReview).length;
-      st.innerHTML=prev+(ran?(nrev?' · '+nrev+' to double-check':' · AI-verified ✓'):'');
+      const aiFail=(!ran&&KLARIO_AI_ERR)?' · <span style="color:#fab219">AI: '+String(KLARIO_AI_ERR).replace(/</g,'&lt;').slice(0,90)+'</span>':'';
+      st.innerHTML=prev+(ran?(nrev?' · '+nrev+' to double-check':' · AI-verified ✓'):aiFail);
     }catch(e){st.innerHTML=prev;}
     sfReady();
   }
