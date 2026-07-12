@@ -358,9 +358,20 @@
   .fbadge.na{background:rgba(255,255,255,.06);color:var(--ink-3)}
   .add-btn{width:100%;background:var(--bg-2);border:1px dashed var(--hair-2);border-radius:16px;padding:14px;
     color:var(--ink-2);font-size:13.5px;font-weight:700;cursor:pointer;margin-bottom:10px;font-family:inherit}
-  #addmem{position:absolute;inset:0;z-index:86;display:none;flex-direction:column;background:var(--bg)}
-  #addmem.on{display:flex}
-  #addmem .sf-body{padding-top:6px}
+  #addmem,#cprof,#mergepick{position:absolute;inset:0;z-index:86;display:none;flex-direction:column;background:var(--bg-1)}
+  #addmem.on,#cprof.on,#mergepick.on{display:flex}
+  #addmem .sf-body,#cprof .sf-body{padding-top:6px}
+  .mp-card{display:flex;gap:12px;align-items:center;background:var(--bg-2);border:1px solid var(--hair);
+    border-radius:16px;padding:13px 14px;margin-bottom:10px;cursor:pointer;width:100%;text-align:left;font-family:inherit}
+  .mp-card .fam-av{width:40px;height:40px;flex:0 0 auto}
+  .mp-card .t{flex:1;min-width:0}
+  .mp-card .t b{font-size:14px;font-weight:700;color:var(--ink);display:block}
+  .mp-card .t small{font-size:11.5px;color:var(--ink-3);display:block;margin-top:2px}
+  .mp-card .chev{color:var(--ink-3)}
+  .fam-merge{flex:0 0 auto;width:34px;height:34px;border-radius:10px;border:1px solid var(--hair);background:transparent;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;margin-left:6px}
+  .fam-merge svg{width:17px;height:17px;stroke:var(--ink-3);fill:none;stroke-width:1.9}
+  .fam-merge:active svg{stroke:var(--accent-2)}
   .add-first{display:block;margin:14px auto 0;background:var(--accent);color:#fff;border:none;
     border-radius:999px;padding:12px 20px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit}
   .rrow-del{position:absolute;top:0;right:0;bottom:0;width:96px;background:#c0442f;color:#fff;
@@ -847,7 +858,7 @@
 
     <!-- FAMILY -->
     <div class="screen" id="scr-family">
-      <div class="scr-h"><button class="back" onclick="showScreen('settings')">‹ Settings</button><h1>Family</h1><p>3 people · Klario watches over all of them</p></div>
+      <div class="scr-h"><button class="back" onclick="showScreen('settings')">‹ Settings</button><h1>Family</h1><p id="famSub">Klario watches over all of them</p></div>
       <div class="scr-body">
         <div class="sec-label">Members</div>
         <div class="fam-card" onclick="goHomeMember(0)">
@@ -951,6 +962,31 @@
       </div>
     </div>
     <div class="sf-foot"><button id="amSave" onclick="addMemberSave()">Add member</button></div>
+  </div>
+
+  <div id="cprof">
+    <div class="sf-head">
+      <h1>Welcome back</h1>
+      <p>Quick confirm so we file your results under the right you.</p>
+    </div>
+    <div class="sf-body">
+      <div class="field"><label>Your name</label><input id="cpName" placeholder="e.g. Ahmed Edathodu" autocomplete="name"></div>
+      <div class="field"><label>Date of birth</label><input id="cpDob" type="date"></div>
+      <div class="field"><label>Sex at birth</label>
+        <div class="seg" id="cpSex"><button data-v="Male" onclick="amPick(this,'#cpSex')">Male</button><button data-v="Female" onclick="amPick(this,'#cpSex')">Female</button><button data-v="Other" onclick="amPick(this,'#cpSex')">Other</button></div>
+      </div>
+      <div class="ob-note" style="margin-top:14px;text-align:left">This sets the correct reference ranges and links any reports already synced to your account.</div>
+    </div>
+    <div class="sf-foot"><button onclick="saveCompleteProfile()">Continue</button></div>
+  </div>
+
+  <div id="mergepick">
+    <div class="sf-head">
+      <button class="sf-x" onclick="closeMerge()">✕</button>
+      <h1 id="mpTitle">Merge into…</h1>
+      <p id="mpSub">Pick who this is really the same person as. Their reports move across; the duplicate is removed.</p>
+    </div>
+    <div class="sf-body" id="mpBody"></div>
   </div>
 
   <input type="file" id="sfInput" multiple accept="application/pdf,image/*" style="display:none">
@@ -1547,7 +1583,11 @@ function fmtTick(v){return Math.abs(v)>=100?Math.round(v):(Math.round(v*10)/10);
 function chart(mk,mIdx,memberKey){
   const rd=mk.rd;
   const v=mk.hist, band=mk.band||parseRef(mk.ref);
-  const sts=v.map((val,i)=>readingStatus(val,band,i===v.length-1,mk.flag));
+  /* judge EACH dot against its own lab's reference (matches the table + source report) */
+  const sts=v.map((val,i)=>{
+    const b=(mk.bands&&mk.bands[i]&&(mk.bands[i].lo!==undefined||mk.bands[i].hi!==undefined))?mk.bands[i]:band;
+    return readingStatus(val,b,i===v.length-1,mk.flag);
+  });
   /* y-domain fits the data; band boundary included only when near the data */
   let lo=Math.min(...v),hi=Math.max(...v);
   const span0=(hi-lo)||Math.abs(hi)*.15||1;
@@ -2177,7 +2217,7 @@ function parseReportLines(lines,fileName){
   for(const t of joined){
     if(!out.name){const m=t.match(/^(?:patient\s*)?name\s*[:\-]\s*([A-Za-z' .-]{3,40})/i);
       if(m&&!/lab|clinic|doctor|test/i.test(m[1])){
-        out.name=m[1].replace(/\s+(sample|date|biological|clinic|report|order|specimen|collection).*/i,'').trim();}}
+        out.name=m[1].replace(/\s+(sample|date|biological|clinic|report|order|specimen|collection|age|sex|gender|patient|dob|d\.?o\.?b|nhs|mrn|ref|id|tel|phone|email|address).*/i,'').replace(/\s+\d.*$/,'').trim();}}
     if(!out.dob){const m=t.match(/(?:date of birth|d\.?o\.?b\.?)\s*[:\-]?\s*(.+)/i);
       if(m){const d=parseDateAny(m[1]);if(d)out.dob=d.toISOString();}}
     if(!out.collected){const m=t.match(/(?:sample collection date|collection date|collected|sample date|date of receipt|specimen date)\s*[:\-]?\s*(.+)/i);
@@ -2198,6 +2238,9 @@ function parseReportLines(lines,fileName){
     });
     if(!hit||seen.has(hit.name))continue;
     const rest=t.slice(low.indexOf(hit.a)+hit.a.length);
+    const md=MARKERS[hit.name];
+    const loOnly=md.lo!==undefined&&md.hi===undefined;   // higher-is-better / lower-bound marker (e.g. HDL, eGFR, vit D)
+    const hiOnly=md.hi!==undefined&&md.lo===undefined;   // upper-bound-only marker (e.g. LDL, cholesterol)
     const nums=[...rest.matchAll(/-?\d[\d,]*\.?\d*/g)].map(m=>({v:normNum(m[0]),i:m.index,raw:m[0]}));
     if(!nums.length)continue;
     let value=nums[0].v;
@@ -2208,19 +2251,29 @@ function parseReportLines(lines,fileName){
     let printedU=um?normU(um[1]):null;
     const printedFlag=(restAfterVal.match(/(?:^|\s)(H|L)(?:\s|$)/)||[])[1]||null;
     let rm=restAfterVal.match(/(\d[\d,]*\.?\d*)\s*[–—-]\s*(\d[\d,]*\.?\d*)/);
-    if(rm){refLo=normNum(rm[1]);refHi=normNum(rm[2]);refText=refLo+' – '+refHi;refFromPdf=true;}
-    else{rm=restAfterVal.match(/<\s*(\d[\d,]*\.?\d*)/);if(rm){refHi=normNum(rm[1]);refText='< '+refHi;refFromPdf=true;}
-      else{rm=restAfterVal.match(/>\s*(\d[\d,]*\.?\d*)/);if(rm){refLo=normNum(rm[1]);refText='> '+refLo;refFromPdf=true;}
+    if(rm){refLo=normNum(rm[1]);refHi=normNum(rm[2]);refFromPdf=true;}
+    else{rm=restAfterVal.match(/<\s*(\d[\d,]*\.?\d*)/);if(rm){refHi=normNum(rm[1]);refFromPdf=true;}
+      else{rm=restAfterVal.match(/>\s*(\d[\d,]*\.?\d*)/);if(rm){refLo=normNum(rm[1]);refFromPdf=true;}
       else{
         const rn=[...restAfterVal.matchAll(/\d[\d,]*\.?\d*/g)].map(m=>normNum(m[0])).filter(isFinite);
-        if(rn.length>=2){refLo=rn[0];refHi=rn[1];refText=refLo+' – '+refHi;refFromPdf=true;}
+        if(rn.length>=2){refLo=rn[0];refHi=rn[1];refFromPdf=true;}
         else if(rn.length===1){
-          if(printedFlag==='H'||(!printedFlag&&value<rn[0])){refHi=rn[0];refText='< '+refHi;}
-          else{refLo=rn[0];refText='> '+refLo;}
+          /* single reference number → place it using the marker's known direction */
+          if(loOnly)refLo=rn[0];
+          else if(hiOnly)refHi=rn[0];
+          else if(printedFlag==='H'||(!printedFlag&&value<rn[0]))refHi=rn[0];
+          else refLo=rn[0];
           refFromPdf=true;
         }
       }}}
-    const md=MARKERS[hit.name];
+    /* reject impossible parsed ranges (hi ≤ lo, e.g. a mis-read "25 – 0") */
+    if(refLo!==undefined&&refHi!==undefined&&!(refHi>refLo)){refLo=refHi=undefined;refFromPdf=false;}
+    /* a lower-bound marker must not end up with ONLY an upper bound (and vice-versa):
+       that's a mis-grabbed number — drop it so the dictionary default is used */
+    if(refFromPdf&&loOnly&&refLo===undefined&&refHi!==undefined){refHi=undefined;refFromPdf=false;}
+    if(refFromPdf&&hiOnly&&refHi===undefined&&refLo!==undefined){refLo=undefined;refFromPdf=false;}
+    if(refLo!==undefined||refHi!==undefined)
+      refText=(refLo!==undefined&&refHi!==undefined)?refLo+' – '+refHi:(refHi!==undefined?'< '+refHi:'> '+refLo);
     if(refLo===undefined&&refHi===undefined){refLo=md.lo;refHi=md.hi;refFromPdf=false;
       refText=(refLo!==undefined&&refHi!==undefined)?refLo+' – '+refHi:(refHi!==undefined?'< '+refHi:(refLo!==undefined?'> '+refLo:'—'));}
     /* normalise cross-lab units to this marker's canonical unit */
@@ -2320,6 +2373,7 @@ function rebuildWorld(){
         band:{lo:last.refLo!==undefined&&last.refLo!==null?last.refLo:undefined,
               hi:last.refHi!==undefined&&last.refHi!==null?last.refHi:undefined},
         hist:rs.map(r=>r.value),
+        bands:rs.map(r=>({lo:(r.refLo!==undefined&&r.refLo!==null)?r.refLo:undefined,hi:(r.refHi!==undefined&&r.refHi!==null)?r.refHi:undefined})),
         rd:rs.map(r=>({d:fmtD(r.dateISO),lab:r.lab||r.clinic||'Lab',x:xOf(r.dateISO),reportId:r.reportId,ref:r.refText}))
       };
       (sysMarkers[md.sys]=sysMarkers[md.sys]||[]).push(mk);
@@ -2577,6 +2631,8 @@ function renderDiary(){
 }
 function renderFamily(){
   const body=document.querySelector('#scr-family .scr-body');
+  const fs=document.getElementById('famSub');
+  if(fs)fs.textContent=MEMBERS.length+' '+(MEMBERS.length===1?'person':'people')+' · Klario watches over all of them';
   const g={att:'att',watch:'watch'};
   body.innerHTML='<div class="sec-label">Members</div>'
     +MEMBERS.map((m,i)=>{
@@ -2585,10 +2641,13 @@ function renderFamily(){
       const badge=flags?'<span class="fbadge att">'+flags+' flag'+(flags>1?'s':'')+'</span>'
         :watch?'<span class="fbadge watch">'+watch+' watching</span>'
         :'<span class="fbadge na">'+(m.hasData?'All in range':'No reports yet')+'</span>';
+      const nrep=RAW.reports.filter(r=>r.memberId===m.key).length;
       return '<div class="fam-card" onclick="goHomeMember('+i+')">'
         +'<div class="fam-av '+m.av+'">'+AVI(m.fullName)+'</div>'
-        +'<div class="t"><b>'+m.fullName+'</b><small>'+(m.relation||'Self')+(ageOf(m.dob)!==null?' · '+(m.baby?Math.max(1,Math.round((new Date()-new Date(m.dob))/2628e6))+' months':ageOf(m.dob)):'')+'</small></div>'
-        +badge+'</div>';
+        +'<div class="t"><b>'+m.fullName+'</b><small>'+(m.relation||'Self')+(ageOf(m.dob)!==null?' · '+(m.baby?Math.max(1,Math.round((new Date()-new Date(m.dob))/2628e6))+' months':ageOf(m.dob)):'')+(nrep?' · '+nrep+' report'+(nrep>1?'s':''):'')+'</small></div>'
+        +badge
+        +((MEMBERS.length>1&&m.relation&&m.relation!=='Self')?'<button class="fam-merge" title="This is a duplicate — merge into someone" onclick="event.stopPropagation();openMergeFor(\''+m.key+'\')"><svg viewBox="0 0 24 24"><path d="M8 3v6a4 4 0 0 0 4 4 4 4 0 0 0 4-4V3M12 13v8M8 18l4 3 4-3"/></svg></button>':'')
+        +'</div>';
     }).join('')
     +'<button class="add-btn" onclick="openAddMember()">+ Add family member</button>'
     +'<div class="sec-label">Connected sources</div>'
@@ -2926,10 +2985,12 @@ function sfPickRel(j,btn,rel){
   sfFileReady();
 }
 function sfReassign(j){
-  const names=RAW.members.map((m,i)=>i+1+'. '+m.name).join('\n');
-  const pick=prompt('Assign to which member?\n'+names+'\n\nEnter a number:');
-  const i=parseInt(pick)-1;
-  if(RAW.members[i]){sfAssign[j]={mode:'match',memberId:RAW.members[i].id};toast('Will file under '+RAW.members[i].name);sfConfirmRefresh(j,RAW.members[i]);}
+  const items=RAW.members.map(m=>({id:m.id,name:m.name,dob:m.dob,relation:m.relation,isSelf:m.isSelf,
+    av:(MEMBERS.find(x=>x.key===m.id)||{}).av,count:RAW.reports.filter(r=>r.memberId===m.id).length}));
+  if(!items.length)return toast('No members yet');
+  openMemberPicker('Assign to which member?','Pick who this report belongs to.',items,m=>{
+    sfAssign[j]={mode:'match',memberId:m.id};toast('Will file under '+firstName(m.name));sfConfirmRefresh(j,m);
+  });
 }
 function sfConfirmRefresh(j,mem){
   const oks=sfFiles.filter(f=>f.state==='ok');
@@ -3131,6 +3192,105 @@ async function syncNow(){
 }
 function setSyncUI(t){const el=document.getElementById('syncState');if(el)el.textContent=t;}
 
+/* ================= member identity: merge & dedupe ================= */
+const normName=s=>(s||'').toLowerCase().replace(/[^a-z]/g,'');
+/* move every report/reading/note/reminder from one member to another, then drop the empty member */
+async function mergeMembers(fromId,intoId){
+  if(!fromId||!intoId||fromId===intoId)return;
+  for(const store of ['reports','readings','notes','reminders']){
+    for(const r of RAW[store].filter(x=>x.memberId===fromId)){r.memberId=intoId;await DB.put(store,r);}
+  }
+  await DB.del('members',fromId);
+  if(CLOUD){await _put('kv',{k:'outboxdel:members:'+fromId,store:'members',id:fromId,t:Date.now()});
+    if(typeof scheduleSync==='function')scheduleSync();}
+}
+/* auto-merge the UNAMBIGUOUS duplicates: several 'self' rows, or identical names */
+async function dedupeMembers(){
+  await loadRaw();
+  let merged=0;
+  const selfs=RAW.members.filter(m=>m.isSelf);
+  if(selfs.length>1){
+    let canon=(RAW.profile&&RAW.profile.selfId&&selfs.find(m=>m.id===RAW.profile.selfId))
+      ||selfs.find(m=>m.dob)||selfs.slice().sort((a,b)=>(a.createdAt||0)-(b.createdAt||0))[0];
+    for(const s of selfs){if(s.id!==canon.id){await mergeMembers(s.id,canon.id);merged++;}}
+    if(RAW.profile&&RAW.profile.selfId!==canon.id){RAW.profile.selfId=canon.id;await _put('kv',RAW.profile);}
+    await loadRaw();
+  }
+  const groups={};
+  RAW.members.filter(m=>!m.isSelf).forEach(m=>{const k=normName(m.name)+'|'+(m.dob||'');if(k!=='|')(groups[k]=groups[k]||[]).push(m);});
+  for(const g of Object.values(groups)){
+    if(g.length<2)continue;
+    g.sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+    for(let i=1;i<g.length;i++){await mergeMembers(g[i].id,g[0].id);merged++;}
+  }
+  if(merged)await loadRaw();
+  return merged;
+}
+/* after profile is confirmed, pull in report-holder rows that are clearly the same person (same DOB or same name) */
+async function mergeMatchingIntoSelf(selfId){
+  const self=RAW.members.find(m=>m.id===selfId);if(!self)return;
+  const sn=normName(self.name);
+  for(const m of RAW.members.filter(x=>x.id!==selfId&&!x.isSelf)){
+    const sameDob=self.dob&&m.dob&&Math.abs(new Date(self.dob)-new Date(m.dob))<86400000*2;
+    const sameName=sn&&normName(m.name)===sn;
+    if(sameDob||sameName)await mergeMembers(m.id,selfId);
+  }
+  await loadRaw();
+}
+/* reusable in-app member picker (replaces the native prompt) */
+function openMemberPicker(title,sub,items,onPick){
+  document.getElementById('mpTitle').textContent=title;
+  document.getElementById('mpSub').textContent=sub;
+  const body=document.getElementById('mpBody');
+  body.innerHTML=items.map((m,i)=>{
+    const age=ageOf(m.dob);
+    return '<button class="mp-card" data-i="'+i+'"><div class="fam-av '+(m.av||'av-g1')+'">'+AVI(m.name||'?')+'</div>'
+      +'<div class="t"><b>'+(m.name||'Unknown')+'</b><small>'+(m.isSelf?'You':(m.relation||'—'))
+      +(age!=null?' · '+age:'')+(m.count!=null?' · '+m.count+' report'+(m.count!==1?'s':''):'')+'</small></div><span class="chev">›</span></button>';
+  }).join('');
+  body.querySelectorAll('.mp-card').forEach(b=>b.onclick=()=>{closeMerge();onPick(items[+b.dataset.i]);});
+  document.getElementById('mergepick').classList.add('on');
+}
+function closeMerge(){document.getElementById('mergepick').classList.remove('on');}
+function openMergeFor(fromKey){
+  const from=RAW.members.find(m=>m.id===fromKey);if(!from)return;
+  const others=RAW.members.filter(m=>m.id!==fromKey).map(m=>({id:m.id,name:m.name,dob:m.dob,relation:m.relation,isSelf:m.isSelf,
+    av:(MEMBERS.find(x=>x.key===m.id)||{}).av,count:RAW.reports.filter(r=>r.memberId===m.id).length}));
+  if(!others.length)return toast('No one to merge into');
+  openMemberPicker('Merge “'+firstName(from.name)+'” into…',
+    'Their reports move across; “'+firstName(from.name)+'” is then removed.',others,async(m)=>{
+      await mergeMembers(fromKey,m.id);await loadRaw();rebuildAll();
+      toast('Merged into '+firstName(m.name));
+  });
+}
+/* complete-profile modal shown after magic-link sign-in when we don't yet know who you are */
+let _cpSession=null;
+function openCompleteProfile(self,session){
+  _cpSession=session||SESSION;
+  const email=((_cpSession&&_cpSession.user.email)||'').split('@')[0].toLowerCase();
+  const nm=(self&&self.name&&normName(self.name)!==normName(email))?self.name:'';
+  document.getElementById('cpName').value=nm;
+  document.getElementById('cpDob').value=self&&self.dob?new Date(self.dob).toISOString().slice(0,10):'';
+  document.querySelectorAll('#cpSex button').forEach(b=>b.classList.toggle('on',!!(self&&self.sex===b.dataset.v)));
+  document.getElementById('cprof').classList.add('on');
+}
+async function saveCompleteProfile(){
+  const name=document.getElementById('cpName').value.trim();
+  if(!name)return toast('Add your name');
+  const dobV=document.getElementById('cpDob').value;
+  const sex=(document.querySelector('#cpSex button.on')||{}).dataset;
+  const dob=dobV?new Date(dobV).toISOString():null;
+  let self=RAW.members.find(m=>m.isSelf);
+  if(self){self.name=name;if(dob)self.dob=dob;if(sex)self.sex=sex.v;self.relation='Self';self.isSelf=true;await DB.put('members',self);}
+  else{self={id:uid(),name,dob,sex:sex?sex.v:null,relation:'Self',isSelf:true,createdAt:Date.now()};await DB.put('members',self);}
+  await _put('kv',{k:'profile',name,dob:self.dob,sex:self.sex,selfId:self.id});
+  await loadRaw();
+  await mergeMatchingIntoSelf(self.id);
+  await loadRaw();rebuildAll(0);
+  document.getElementById('cprof').classList.remove('on');
+  enterApp('Welcome back, '+firstName(name));
+}
+
 /* ---------- PDF fetch-on-demand from Storage ---------- */
 const _openOriginalPdf=openOriginalPdf;
 openOriginalPdf=async function(rid){
@@ -3314,18 +3474,24 @@ async function cloudInit(){
   if(!CLOUD)return;
   const {data:{session}}=await SB.auth.getSession();
   SESSION=session;
+  let RECONCILED=false;
   SB.auth.onAuthStateChange(async (_e,s)=>{
     SESSION=s;renderAccountRow();
-    if(s){
-      /* first sign-in: adopt profile name from SSO if onboarding not done */
-      if(!RAW.profile){
-        const nm=s.user.user_metadata&&(s.user.user_metadata.full_name||s.user.user_metadata.name)||s.user.email.split('@')[0];
-        const self={id:uid(),name:nm,dob:null,sex:null,relation:'Self',isSelf:true,createdAt:Date.now()};
-        await DB.put('members',self);
-        await _put('kv',{k:'profile',name:nm,dob:null,sex:null,selfId:self.id});
-        await loadRaw();rebuildAll(0);enterApp('Signed in as '+nm);
-      }
-      syncNow();
+    if(!s){RECONCILED=false;return;}
+    if(RECONCILED){scheduleSync();return;}
+    RECONCILED=true;
+    /* pull remote FIRST so a second device doesn't create a duplicate 'self' */
+    await syncNow();
+    await dedupeMembers();               // clean up any existing duplicate members
+    await loadRaw();
+    const self=RAW.members.find(m=>m.isSelf);
+    const emailPrefix=(s.user.email||'').split('@')[0].toLowerCase();
+    const incomplete=!self||!self.name||normName(self.name)===normName(emailPrefix)||!self.dob;
+    if(incomplete){
+      openCompleteProfile(self,s);        // ask name / DOB / sex, then link everything up
+    } else {
+      rebuildAll(0);enterApp('Signed in');
+      scheduleSync();
     }
   });
   if(SESSION)syncNow();
