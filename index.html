@@ -922,7 +922,7 @@
           <svg viewBox="0 0 24 24"><path d="M12 3l2.2 5.6L20 10l-5 3.5L16.5 20 12 16.5 7.5 20 9 13.5 4 10l5.8-1.4z"/></svg>
           <div class="t"><b>Test Klario AI</b><small>Check the AI connection & see any error</small></div><span class="chev">›</span></button>
         <div id="aiTestOut" style="display:none;font-size:12px;line-height:1.5;color:var(--ink-2);background:var(--bg-2);border:1px solid var(--hair);border-radius:12px;padding:12px 14px;margin:2px 0 8px;word-break:break-word"></div>
-        <div style="text-align:center;font-size:10px;color:var(--ink-3);padding:16px 0 4px" id="verStamp">Klario v0.9.4 · build 2026-07-12u</div>
+        <div style="text-align:center;font-size:10px;color:var(--ink-3);padding:16px 0 4px" id="verStamp">Klario v0.9.5 · build 2026-07-12v</div>
       </div>
     </div>
 
@@ -3883,18 +3883,20 @@ async function aiAssist(task,payload){
   }catch(e){KLARIO_AI_ERR=String(e&&e.message||e);console.error('[ai-assist]',task,e);return null;}
 }
 /* ---------- voice notes (diary) ---------- */
-let _rec=null,_recOn=false;
+let _rec=null,_recOn=false,_voiceGot=false;
 function startVoice(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   const field=document.getElementById('jField');const btn=document.querySelector('.dv-mic');
   if(!SR){field&&field.focus();toast('Dictation isn’t available here — tap the mic on your keyboard instead');return;}
   if(_recOn){try{_rec&&_rec.stop();}catch(e){}return;}
-  _rec=new SR();_rec.lang='en-GB';_rec.interimResults=true;_rec.continuous=true;
+  _rec=new SR();_rec.lang='en-GB';_rec.interimResults=true;_rec.continuous=true;_voiceGot=false;
   const base=field.value?field.value.replace(/\s+$/,'')+' ':'';
-  _rec.onresult=e=>{let t='';for(let i=e.resultIndex;i<e.results.length;i++)t+=e.results[i][0].transcript;field.value=base+t;};
-  _rec.onend=()=>{_recOn=false;btn&&btn.classList.remove('rec');};
+  _rec.onresult=e=>{let t='';for(let i=e.resultIndex;i<e.results.length;i++)t+=e.results[i][0].transcript;if(t.trim())_voiceGot=true;field.value=base+t;};
+  _rec.onend=()=>{_recOn=false;btn&&btn.classList.remove('rec');
+    /* auto-save on stop so a captured voice note can never be lost on refresh */
+    if(_voiceGot&&field.value.trim()){_voiceGot=false;toast('Saving voice note…');addNote();}};
   _rec.onerror=ev=>{_recOn=false;btn&&btn.classList.remove('rec');if(ev&&ev.error!=='aborted')toast('Couldn’t hear that — try again');};
-  try{_rec.start();_recOn=true;btn&&btn.classList.add('rec');toast('Listening… tap the mic again to stop, then Add');}
+  try{_rec.start();_recOn=true;btn&&btn.classList.add('rec');toast('Listening… tap the mic again to save');}
   catch(e){toast('Couldn’t start the mic');}
 }
 /* parse fallback: rescue documents the local parser barely read */
