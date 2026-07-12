@@ -210,8 +210,9 @@
   .tile.att .st{color:var(--warn)} .tile.watch .st{color:var(--watch)}
   .tile.good .st{color:var(--good)} .tile.nodata .st{color:var(--ink-3)} .tile.na .st{color:var(--ink-3)}
 
+  .who-top{text-align:center;padding:4px 22px 8px}
+  .who-top h2{font-size:21px;font-weight:800;letter-spacing:-.3px}
   .who-cap{text-align:center;padding:0 22px 9px}
-  .who-cap h2{font-size:18px;font-weight:800}
   .who-cap .asof{font-size:11px;color:var(--ink-3);display:block;margin-top:1px}
 
   .spot{position:absolute;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;
@@ -492,10 +493,27 @@
   .dv-camin:active svg{stroke:var(--accent-2)}
   .dv-add{background:transparent;border:none;color:var(--accent-2);font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;padding:6px 2px}
   /* single calm add bar + quick mic */
-  .dv-addrow{display:flex;gap:10px;align-items:center;margin:2px 0 4px}
-  .dv-addbar{flex:1;display:flex;align-items:center;gap:10px;background:var(--bg-2);border:1px solid var(--hair-2);
-    border-radius:14px;padding:14px 16px;color:var(--ink-3);font-size:14.5px;font-family:inherit;cursor:pointer;text-align:left}
-  .dv-addbar .dv-plus{font-size:18px;color:var(--accent-2);font-weight:700;line-height:1}
+  .dv-addbar{width:100%;display:flex;align-items:center;gap:9px;background:var(--bg-2);border:1px solid var(--hair-2);
+    border-radius:12px;padding:0 12px;height:44px;color:var(--ink-3);font-size:13px;font-family:inherit;cursor:pointer;text-align:left;margin:2px 0 0}
+  .dv-addbar .dv-plus{font-size:17px;color:var(--accent-2);font-weight:600;line-height:1}
+  .dv-inmic{margin-left:auto;width:27px;height:27px;border-radius:50%;background:var(--bg-3);color:var(--ink-2);
+    display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .dv-inmic svg{width:14px;height:14px;stroke:currentColor;fill:currentColor;stroke-width:0}
+  .dv-inmic svg path,.dv-inmic svg line{stroke:currentColor;fill:none;stroke-width:1.9}
+  .dv-inmic svg rect{fill:currentColor}
+  .dv-inmic.rec{background:linear-gradient(135deg,#c0442f,#e0563f);color:#fff;animation:recpulse 1s ease-in-out infinite}
+  /* underline diary search — borderless, one hairline beneath */
+  .dv-search{display:flex;align-items:center;gap:9px;height:40px;padding:0 2px;margin-top:16px;border-bottom:1px solid var(--hair-2)}
+  .dv-search svg{width:15px;height:15px;stroke:var(--ink-3);fill:none;stroke-width:1.9;flex:0 0 auto}
+  .dv-search input{flex:1;background:transparent;border:none;outline:none;color:var(--ink);font-size:13px;font-family:inherit}
+  .dv-search input::placeholder{color:var(--ink-3)}
+  /* inline icon view toggle on the section header line */
+  .sec-row{display:flex;align-items:center;justify-content:space-between;padding:16px 4px 8px}
+  .sec-row .sec-label{padding:0}
+  .dv-vg{display:flex;gap:3px}
+  .dv-vg button{width:26px;height:24px;border-radius:8px;border:none;background:transparent;color:var(--ink-3);display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .dv-vg button svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.9}
+  .dv-vg button.on{background:rgba(45,212,191,.14);color:var(--accent-2)}
   .dv-quickmic{flex:0 0 auto;width:48px;height:48px;border-radius:14px;border:none;cursor:pointer;
     background:linear-gradient(135deg,#1c4a8f,#2a78d6);color:#fff;display:flex;align-items:center;justify-content:center}
   .dv-quickmic svg{width:20px;height:20px;stroke:#fff;fill:none;stroke-width:2}
@@ -524,22 +542,26 @@
   .vtog button{border:none;background:transparent;color:var(--ink-3);font-size:12px;font-weight:700;padding:6px 14px;border-radius:9px;cursor:pointer;font-family:inherit}
   .vtog button.on{background:var(--bg-3);color:var(--accent-2)}
   .dv-vrow{padding:12px 20px 0;display:flex;justify-content:flex-start}
-  .dv-chips{display:flex;gap:7px;padding:12px 20px 0;overflow-x:auto;scrollbar-width:none}
+  /* one consistent 18px gutter for the whole diary top (matches .scr-body) */
+  #scr-journal .scr-h{padding:8px 18px 0}
+  .dv-top{padding:0 18px}
+  .dv-chips{display:flex;gap:7px;margin-top:14px;overflow-x:auto;scrollbar-width:none}
   .dv-chips::-webkit-scrollbar{display:none}
   .dv-chips button{flex:0 0 auto;border:1px solid var(--hair-2);background:transparent;color:var(--ink-3);border-radius:999px;
-    padding:5.5px 13px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap}
+    padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap}
   .dv-chips button.on{background:var(--bg-3);color:var(--ink);border-color:var(--hair-2)}
-  .en{border-radius:16px;margin-bottom:10px;position:relative;overflow:hidden}
-  .en-in{background:var(--bg-2);border:1px solid var(--hair);border-radius:16px;padding:13px 15px;cursor:pointer;position:relative;z-index:2;transition:transform .18s ease}
+  #scr-journal .sec-label{font-size:10px;padding:2px 0}
+  .en{border-radius:14px;margin-bottom:10px;position:relative;overflow:hidden}
+  .en-in{background:var(--bg-2);border:1px solid var(--hair);border-radius:14px;padding:12px 13px;cursor:pointer;position:relative;z-index:2;transition:transform .18s ease}
   .en.swiped .en-in{transform:translateX(-96px)}
-  .en-del{position:absolute;top:0;right:0;bottom:0;width:96px;background:#c0442f;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;z-index:1;border:none;font-family:inherit;cursor:pointer;border-radius:16px}
-  .en b.en-t{font-size:14px;font-weight:700;display:block;line-height:1.35}
-  .en p.en-b{font-size:12.5px;color:var(--ink-2);margin-top:3px;line-height:1.45}
-  .en .en-meta{display:flex;align-items:center;gap:8px;margin-top:9px;flex-wrap:wrap}
-  .en .en-d{font-size:11px;color:var(--ink-3)}
-  .en .en-cam{width:13px;height:13px;stroke:var(--ink-3);fill:none;stroke-width:1.7;vertical-align:-2px;margin-right:3px}
-  .en-tag{font-size:10px;font-weight:700;padding:2.5px 9px;border-radius:8px;background:var(--bg-3);color:var(--ink-2);border:1px solid var(--hair);letter-spacing:.3px}
-  .en-remind{margin-left:auto;font-size:11.5px;font-weight:700;color:var(--accent-2);cursor:pointer}
+  .en-del{position:absolute;top:0;right:0;bottom:0;width:96px;background:#c0442f;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;z-index:1;border:none;font-family:inherit;cursor:pointer;border-radius:14px}
+  .en b.en-t{font-size:13px;font-weight:700;display:block;line-height:1.35}
+  .en p.en-b{font-size:12px;color:var(--ink-2);margin-top:3px;line-height:1.45}
+  .en .en-meta{display:flex;align-items:center;gap:7px;margin-top:9px;flex-wrap:wrap}
+  .en .en-d{font-size:10.5px;color:var(--ink-3)}
+  .en .en-cam{width:12px;height:12px;stroke:var(--ink-3);fill:none;stroke-width:1.7;vertical-align:-2px;margin-right:3px}
+  .en-tag{font-size:9.5px;font-weight:700;padding:2.5px 8px;border-radius:7px;background:var(--bg-3);color:var(--ink-2);border:1px solid var(--hair);letter-spacing:.3px}
+  .en-remind{margin-left:auto;font-size:11px;font-weight:700;color:var(--accent-2);cursor:pointer}
   .en-shim{display:inline-block;font-size:10px;font-weight:700;padding:2.5px 9px;border-radius:8px;border:1px solid var(--hair);
     color:var(--ink-3);background:linear-gradient(100deg,var(--bg-3) 40%,#243044 50%,var(--bg-3) 60%);background-size:200% 100%;animation:dvsh 1.2s linear infinite}
   @keyframes dvsh{to{background-position:-200% 0}}
@@ -878,13 +900,23 @@
     <!-- DIARY v2 -->
     <div class="screen" id="scr-journal">
       <div class="scr-h"><h1>Diary</h1></div>
-      <div class="dv-addrow">
+      <div class="dv-top">
         <button class="dv-addbar" onclick="openCompose()">
           <span class="dv-plus">＋</span><span id="dvAddLbl">Add to your diary…</span>
+          <span class="dv-inmic" onclick="event.stopPropagation();openCompose(null,true)" aria-label="Dictate a note">
+            <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/></svg>
+          </span>
         </button>
-        <button class="dv-quickmic" onclick="openCompose(null,true)" aria-label="Dictate a note">
-          <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor" stroke="none"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/></svg>
-        </button>
+        <div class="dv-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <input id="diarySearch" placeholder="Search notes, prescriptions, documents…" oninput="renderDiary()"></div>
+        <div class="dv-chips" id="dvChips">
+          <button class="on" data-f="all" onclick="diaryFilter(this)">All</button>
+          <button data-f="note" onclick="diaryFilter(this)">Notes</button>
+          <button data-f="rx" onclick="diaryFilter(this)">Prescriptions</button>
+          <button data-f="doc" onclick="diaryFilter(this)">Documents</button>
+          <button data-f="rem" onclick="diaryFilter(this)">Reminders</button>
+        </div>
+        <div id="remStrip"></div>
       </div>
       <input id="jField" type="hidden">
       <input type="file" id="dvPhoto" accept="image/*" capture="environment" style="display:none" onchange="if(this.files[0])diaryPhotoChosen(this.files[0]);this.value='';">
@@ -915,17 +947,6 @@
           <button class="cmp-tool cmp-del" id="cmpDel" style="display:none" onclick="composeDelete()"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/></svg>Delete</button>
         </div>
       </div>
-      <div class="dv-vrow"><div class="vtog"><button class="on" data-v="cards" onclick="diaryView('cards',this)">Cards</button><button data-v="table" onclick="diaryView('table',this)">Table</button></div></div>
-      <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-        <input id="diarySearch" placeholder="Search notes, prescriptions, documents…" oninput="renderDiary()"></div>
-      <div class="dv-chips" id="dvChips">
-        <button class="on" data-f="all" onclick="diaryFilter(this)">All</button>
-        <button data-f="note" onclick="diaryFilter(this)">Notes</button>
-        <button data-f="rx" onclick="diaryFilter(this)">Prescriptions</button>
-        <button data-f="doc" onclick="diaryFilter(this)">Documents</button>
-        <button data-f="rem" onclick="diaryFilter(this)">Reminders</button>
-      </div>
-      <div id="remStrip"></div>
       <div class="scr-body">
         <div id="jList"></div>
         <div id="jLedger" style="display:none"></div>
@@ -965,7 +986,7 @@
           <svg viewBox="0 0 24 24"><path d="M12 3l2.2 5.6L20 10l-5 3.5L16.5 20 12 16.5 7.5 20 9 13.5 4 10l5.8-1.4z"/></svg>
           <div class="t"><b>Test Klario AI</b><small>Check the AI connection & see any error</small></div><span class="chev">›</span></button>
         <div id="aiTestOut" style="display:none;font-size:12px;line-height:1.5;color:var(--ink-2);background:var(--bg-2);border:1px solid var(--hair);border-radius:12px;padding:12px 14px;margin:2px 0 8px;word-break:break-word"></div>
-        <div style="text-align:center;font-size:10px;color:var(--ink-3);padding:16px 0 4px" id="verStamp">Klario v0.9.7 · build 2026-07-12x</div>
+        <div style="text-align:center;font-size:10px;color:var(--ink-3);padding:16px 0 4px" id="verStamp">Klario v0.9.8 · build 2026-07-13a</div>
       </div>
     </div>
 
@@ -1551,6 +1572,7 @@ MEMBERS.forEach((m,i)=>{
   p.className='panel';
   p.innerHTML=`
     <div class="pane">
+      <div class="who-top"><h2>${m.name}</h2></div>
       <div class="aur"></div>
       <div class="stage">
         <div class="fig">
@@ -1559,7 +1581,7 @@ MEMBERS.forEach((m,i)=>{
         </div>
         <div class="tiles">${tilesHTML(m)}</div>
       </div>
-      <div class="who-cap"><h2>${m.name}</h2><span class="asof">${m.asof}</span></div>
+      <div class="who-cap"><span class="asof">${m.asof}</span></div>
     </div>
     ${m.hasData?`<div class="insight" data-stories="${m.key}">
       <span class="dot ${m.insight.cls}"></span><p>${m.insight.html}</p>
@@ -3022,13 +3044,24 @@ function diaryMatch(n){
   if(!q)return true;
   return ((n.title||'')+' '+(n.text||'')+' '+(n.ocr||'')+' '+(n.where||'')+' '+(n.source||'')).toLowerCase().includes(q);
 }
-function renderReminderStrip(m){
-  const el=document.getElementById('remStrip');if(!el)return;
+function viewToggleHTML(){
+  const c=DIARY_VIEW==='cards',t=DIARY_VIEW==='table';
+  return '<span class="dv-vg">'
+    +'<button class="'+(c?'on':'')+'" onclick="diaryView(\'cards\')" aria-label="Cards view"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="6" rx="2"/><rect x="4" y="13" width="16" height="6" rx="2"/></svg></button>'
+    +'<button class="'+(t?'on':'')+'" onclick="diaryView(\'table\')" aria-label="Table view"><svg viewBox="0 0 24 24"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg></button>'
+    +'</span>';
+}
+function renderReminderStrip(m,firstLbl){
+  const el=document.getElementById('remStrip');if(!el)return {hasRem:false,usedFirstLabel:false};
   const rems=RAW.notes.filter(n=>n.memberId===m.key&&n.remindDue&&!n.remindDone)
     .sort((a,b)=>String(a.remindDue).localeCompare(String(b.remindDue)));
-  if(!rems.length){el.innerHTML='';return;}
+  if(!rems.length){
+    /* no reminders — host the view toggle on the first content label so it's always visible (both views) */
+    if(firstLbl){el.innerHTML='<div class="sec-row"><span class="sec-label">'+firstLbl+'</span>'+viewToggleHTML()+'</div>';return {hasRem:false,usedFirstLabel:true};}
+    el.innerHTML='';return {hasRem:false,usedFirstLabel:false};
+  }
   const today=new Date().toISOString().slice(0,10);
-  el.innerHTML='<div class="sec-label">Upcoming</div>'+rems.slice(0,4).map(n=>{
+  el.innerHTML='<div class="sec-row"><span class="sec-label">Upcoming</span>'+viewToggleHTML()+'</div>'+rems.slice(0,4).map(n=>{
     const overdue=n.remindDue<today;
     const dueTxt=overdue?'overdue · was '+fmtDL(n.remindDue):'due '+fmtDL(n.remindDue);
     return '<div style="display:flex;align-items:center;gap:10px;background:var(--bg-2);border:1px solid '+(overdue?'rgba(250,178,25,.4)':'var(--hair)')+';border-radius:14px;padding:11px 13px;margin-bottom:8px" onclick="openEntry(\''+n.id+'\')">'
@@ -3038,6 +3071,7 @@ function renderReminderStrip(m){
       +'<button onclick="event.stopPropagation();reminderDone(\''+n.id+'\')" style="border:1px solid var(--hair-2);background:transparent;color:var(--good);border-radius:999px;padding:5px 12px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer">Done</button>'
       +'</div>';
   }).join('');
+  return {hasRem:true,usedFirstLabel:false};
 }
 async function reminderDone(id){
   const n=RAW.notes.find(x=>x.id===id);if(!n)return;
@@ -3047,15 +3081,19 @@ function renderDiary(){
   const m=MEMBERS[typeof idx==='number'?idx:0];if(!m)return;
   const all=RAW.notes.filter(n=>n.memberId===m.key).sort((a,b)=>new Date(b.dateISO)-new Date(a.dateISO));
   const notes=all.filter(diaryMatch);
-  renderReminderStrip(m);
+  const firstLbl=notes.length?(fmtTL(notes[0].dateISO)===fmtTL(new Date())?'This month':fmtTL(notes[0].dateISO)):null;
+  const strip=renderReminderStrip(m,firstLbl);
   {const al=document.getElementById('dvAddLbl');if(al)al.textContent='Add to '+m.name+'’s diary…';}
   const camSvg='<svg class="en-cam" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v12H4z"/><circle cx="12" cy="13.5" r="3.2"/></svg>';
   const list=document.getElementById('jList'),ledger=document.getElementById('jLedger');
   /* CARDS */
-  let mon='';let h='';
+  let mon='';let h='';let firstGroup=true;
   notes.forEach(n=>{
     const d=new Date(n.dateISO),ml=fmtTL(n.dateISO);
-    if(ml!==mon){mon=ml;h+='<div class="sec-label">'+(ml===fmtTL(new Date())?'This month':ml)+'</div>';}
+    if(ml!==mon){mon=ml;const lbl=(ml===fmtTL(new Date())?'This month':ml);
+      if(firstGroup&&strip.usedFirstLabel){/* first label already shown in the strip with the toggle */}
+      else h+='<div class="sec-label">'+lbl+'</div>';
+      firstGroup=false;}
     const t=eType(n);
     const title=n.title||(n.text?n.text.slice(0,60):(t==='rx'?'Prescription':t==='doc'?'Document':'Note'));
     h+='<div class="en" data-id="'+n.id+'">'
@@ -3092,7 +3130,7 @@ function renderDiary(){
   de.style.display=notes.length?'none':'block';
   de.innerHTML=all.length?'Nothing matches that filter.':('No diary entries for '+m.name+' yet.<br>Doctor advice, symptoms, a photo of a prescription — anything worth remembering.');
 }
-function diaryView(v,btn){DIARY_VIEW=v;document.querySelectorAll('#scr-journal .vtog button').forEach(b=>b.classList.toggle('on',b===btn));renderDiary();}
+function diaryView(v){DIARY_VIEW=v;renderDiary();}
 function diaryFilter(btn){DIARY_FILTER=btn.dataset.f;document.querySelectorAll('#dvChips button').forEach(b=>b.classList.toggle('on',b===btn));renderDiary();}
 /* ---------- photo capture ---------- */
 function diaryCapture(){document.getElementById('capMenu').style.display='block';}
