@@ -273,6 +273,11 @@
   .tldot small{font-size:9px;color:var(--ink-3);font-weight:700;white-space:nowrap}
   .tldot.on i{background:var(--accent-2);border-color:var(--accent-2);box-shadow:0 0 8px var(--accent-2)}
   .tldot.on small{color:var(--accent-2)}
+  .tlchips{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;padding:2px 0 2px}
+  .tlchips::-webkit-scrollbar{display:none}
+  .tlchip{flex:0 0 auto;border:1px solid var(--hair-2);background:transparent;color:var(--ink-3);border-radius:999px;
+    padding:6px 13px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap}
+  .tlchip.on{background:var(--bg-3);color:var(--accent-2);border-color:var(--accent-2)}
 
   /* ============ list screens ============ */
   .scr-body{flex:1;overflow-y:auto;padding:0 18px 110px;min-height:0}
@@ -466,6 +471,56 @@
   .j-tag{font-size:9.5px;font-weight:700;padding:3px 8px;border-radius:8px;
     background:var(--bg-3);border:1px solid var(--hair-2);color:var(--ink-2)}
   .j-auto{font-size:10px;color:var(--ink-3);display:block;width:100%;margin-top:4px}
+
+  /* ============ Diary v2 ============ */
+  .dv-cap{display:flex;gap:10px;align-items:center;padding:14px 20px 4px}
+  .dv-mic{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,#1c4a8f,#2a78d6);border:none;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;flex:0 0 auto}
+  .dv-mic svg{width:19px;height:19px;stroke:#fff;fill:none;stroke-width:2}
+  .dv-fieldwrap{flex:1;position:relative}
+  .dv-fieldwrap input{width:100%;background:var(--bg-2);border:1px solid var(--hair-2);border-radius:999px;
+    padding:13px 46px 13px 16px;color:var(--ink);font-size:14px;outline:none;font-family:inherit}
+  .dv-fieldwrap input::placeholder{color:var(--ink-3)}
+  .dv-camin{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:36px;height:36px;border-radius:50%;
+    border:none;background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .dv-camin svg{width:20px;height:20px;stroke:var(--ink-2);fill:none;stroke-width:1.9}
+  .dv-camin:active svg{stroke:var(--accent-2)}
+  .dv-add{background:transparent;border:none;color:var(--accent-2);font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;padding:6px 2px}
+  .vtog{display:flex;background:var(--bg-2);border:1px solid var(--hair);border-radius:12px;padding:3px}
+  .vtog button{border:none;background:transparent;color:var(--ink-3);font-size:12px;font-weight:700;padding:6px 14px;border-radius:9px;cursor:pointer;font-family:inherit}
+  .vtog button.on{background:var(--bg-3);color:var(--accent-2)}
+  .dv-vrow{padding:12px 20px 0;display:flex;justify-content:flex-start}
+  .dv-chips{display:flex;gap:7px;padding:12px 20px 0;overflow-x:auto;scrollbar-width:none}
+  .dv-chips::-webkit-scrollbar{display:none}
+  .dv-chips button{flex:0 0 auto;border:1px solid var(--hair-2);background:transparent;color:var(--ink-3);border-radius:999px;
+    padding:5.5px 13px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap}
+  .dv-chips button.on{background:var(--bg-3);color:var(--ink);border-color:var(--hair-2)}
+  .en{background:var(--bg-2);border:1px solid var(--hair);border-radius:16px;padding:13px 15px;margin-bottom:10px;cursor:pointer}
+  .en b.en-t{font-size:14px;font-weight:700;display:block;line-height:1.35}
+  .en p.en-b{font-size:12.5px;color:var(--ink-2);margin-top:3px;line-height:1.45}
+  .en .en-meta{display:flex;align-items:center;gap:8px;margin-top:9px;flex-wrap:wrap}
+  .en .en-d{font-size:11px;color:var(--ink-3)}
+  .en .en-cam{width:13px;height:13px;stroke:var(--ink-3);fill:none;stroke-width:1.7;vertical-align:-2px;margin-right:3px}
+  .en-tag{font-size:10px;font-weight:700;padding:2.5px 9px;border-radius:8px;background:var(--bg-3);color:var(--ink-2);border:1px solid var(--hair);letter-spacing:.3px}
+  .en-remind{margin-left:auto;font-size:11.5px;font-weight:700;color:var(--accent-2);cursor:pointer}
+  .en-shim{display:inline-block;font-size:10px;font-weight:700;padding:2.5px 9px;border-radius:8px;border:1px solid var(--hair);
+    color:var(--ink-3);background:linear-gradient(100deg,var(--bg-3) 40%,#243044 50%,var(--bg-3) 60%);background-size:200% 100%;animation:dvsh 1.2s linear infinite}
+  @keyframes dvsh{to{background-position:-200% 0}}
+  .en-wt{margin-top:9px}
+  .en-wt small{font-size:11px;color:var(--ink-3);display:block;margin-bottom:7px}
+  .en-wt .c{display:flex;gap:7px;flex-wrap:wrap}
+  .en-wt .c button{border:1px solid var(--hair-2);background:var(--bg-3);color:var(--ink-2);border-radius:999px;padding:5px 12px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit}
+  .lhead{display:flex;padding:8px 2px;border-bottom:1px solid var(--hair-2);font-size:10.5px;font-weight:800;letter-spacing:1px;color:var(--ink-3);text-transform:uppercase}
+  .lhead .w{width:62px;flex:0 0 auto}.lhead .x{flex:1}.lhead .k{width:92px;text-align:right}
+  .lrow{display:flex;align-items:baseline;padding:11px 2px;border-bottom:1px solid var(--hair);cursor:pointer}
+  .lrow .w{width:62px;flex:0 0 auto;font-size:11px;color:var(--ink-3)}
+  .lrow .x{flex:1;min-width:0;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:8px}
+  .lrow .x small{display:block;font-size:11px;color:var(--ink-3);font-weight:500;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lrow .k{width:92px;text-align:right}
+  #dvPhotoView{position:absolute;inset:0;z-index:88;display:none;flex-direction:column;background:rgba(3,5,10,.96);padding:calc(env(safe-area-inset-top,0) + 20px) 16px 20px}
+  #dvPhotoView.on{display:flex}
+  #dvPhotoView img{max-width:100%;max-height:100%;object-fit:contain;margin:auto;border-radius:8px}
+  #dvPhotoView .close{position:absolute;top:calc(env(safe-area-inset-top,0) + 16px);right:16px;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.12);border:none;color:#fff;font-size:16px;cursor:pointer;z-index:2}
 
   /* ============ scan flow ============ */
   #scanflow{position:absolute;inset:0;z-index:85;display:none;flex-direction:column;
@@ -780,69 +835,35 @@
       <button class="fab" onclick="scanStart(false)">+</button>
     </div>
 
-    <!-- DIARY -->
+    <!-- DIARY v2 -->
     <div class="screen" id="scr-journal">
       <div class="scr-h"><h1>Diary</h1></div>
-      <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-        <input id="diarySearch" placeholder="Search your notes…"></div>
-      <div class="scr-body">
-        <div class="j-input">
-          <button class="j-mic" onclick="toast('Recording… Klario transcribes, summarises and tags it')" aria-label="Record a voice note">
-            <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="9" y="3" width="6" height="11" rx="3" fill="#fff" stroke="none"/>
-              <path d="M5 11a7 7 0 0 0 14 0"/>
-              <line x1="12" y1="18" x2="12" y2="21"/>
-            </svg>
+      <div class="dv-cap">
+        <button class="dv-mic" onclick="toast('Voice notes coming soon')" aria-label="Record a voice note">
+          <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3" fill="#fff" stroke="none"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/></svg>
+        </button>
+        <div class="dv-fieldwrap">
+          <input id="jField" placeholder="Doc said… / pain in… / felt…">
+          <button class="dv-camin" onclick="diaryCapture()" aria-label="Capture a photo">
+            <svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v12H4z"/><circle cx="12" cy="13.5" r="3.4"/></svg>
           </button>
-          <input class="j-field" id="jField" placeholder="Doc said… / pain in… / felt…">
-          <button class="j-add" onclick="addNote()">Add</button>
         </div>
-        <details class="j-how">
-          <summary>How Klario uses your diary</summary>
-          <p>Notes are summarised and quietly attached to the right body system — so "recheck lipids in September" becomes a reminder on your heart story, and "migraine again" becomes context your GP summary can include.</p>
-        </details>
-        <div class="sec-label">Reminders</div>
-        <div id="remList">
-          <div class="rem-row" data-m="ahmed">
-            <svg viewBox="0 0 24 24"><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6"/><path d="M10 19a2 2 0 0 0 4 0"/></svg>
-            <div class="t"><b>Recheck lipids</b><small>from "Dr Patel: recheck in 3 months…"</small></div>
-            <span class="rem-when">Sep 2026</span>
-          </div>
-          <div class="rem-row" data-m="shezah">
-            <svg viewBox="0 0 24 24"><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6"/><path d="M10 19a2 2 0 0 0 4 0"/></svg>
-            <div class="t"><b>Ferritin recheck</b><small>from her iron-drift insight</small></div>
-            <span class="rem-when">Sep 2026</span>
-          </div>
-        </div>
-        <div class="rem-note" id="remNote" style="display:none"></div>
-        <div class="sec-label" id="jMonthLabel">This month</div>
-        <div id="jList">
-          <div class="j-note" data-m="ahmed">
-            <p>Dr Patel: cholesterol likely lifestyle-related, recheck lipids in 3 months before considering statins.</p>
-            <div class="j-meta"><span class="j-date">14 Jun 2026 · voice note</span>
-              <span class="j-tag">Cardiovascular</span>
-              <span class="j-auto">Reminder set · Sep 2026</span></div>
-          </div>
-          <div class="j-note" data-m="ahmed">
-            <p>Migraine in the evening — second this month. Poor sleep the night before both times.</p>
-            <div class="j-meta"><span class="j-date">2 Jun 2026 · typed</span>
-              <span class="j-tag">Brain & Nerves</span>
-              <span class="j-auto">Pattern noticed: 2× after short sleep</span></div>
-          </div>
-          <div class="j-note" data-m="ahmed">
-            <p>Right shoulder pain when lifting Kai — worse in the morning.</p>
-            <div class="j-meta"><span class="j-date">28 May 2026 · voice note</span>
-              <span class="j-tag">Musculoskeletal</span>
-              <span class="j-auto">Will appear in GP summary</span></div>
-          </div>
-          <div class="j-note" data-m="shezah">
-            <p>Felt dizzy standing up quickly — twice this week.</p>
-            <div class="j-meta"><span class="j-date">8 Jun 2026 · typed</span>
-              <span class="j-tag">Blood</span>
-              <span class="j-auto">Linked to her ferritin watch</span></div>
-          </div>
-        </div>
-        <div class="empty-hint" id="diaryEmpty" style="display:none">No diary entries for Kai yet.<br>Feeding notes, sleep or symptoms here builds his story early.</div>
+        <button class="dv-add" onclick="addNote()">Add</button>
+      </div>
+      <input type="file" id="dvPhoto" accept="image/*" capture="environment" style="display:none" onchange="if(this.files[0])diaryPhotoChosen(this.files[0]);this.value='';">
+      <div class="dv-vrow"><div class="vtog"><button class="on" data-v="cards" onclick="diaryView('cards',this)">Cards</button><button data-v="table" onclick="diaryView('table',this)">Table</button></div></div>
+      <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input id="diarySearch" placeholder="Search notes, prescriptions, documents…" oninput="renderDiary()"></div>
+      <div class="dv-chips" id="dvChips">
+        <button class="on" data-f="all" onclick="diaryFilter(this)">All</button>
+        <button data-f="note" onclick="diaryFilter(this)">Notes</button>
+        <button data-f="rx" onclick="diaryFilter(this)">Prescriptions</button>
+        <button data-f="doc" onclick="diaryFilter(this)">Documents</button>
+      </div>
+      <div class="scr-body">
+        <div id="jList"></div>
+        <div id="jLedger" style="display:none"></div>
+        <div class="empty-hint" id="diaryEmpty" style="display:none"></div>
       </div>
     </div>
 
@@ -1019,6 +1040,8 @@
     </div>
     <div class="sf-body" id="rqBody"></div>
   </div>
+
+  <div id="dvPhotoView"><button class="close" onclick="document.getElementById('dvPhotoView').classList.remove('on')">✕</button><img id="dvPhotoImg" alt="Diary photo"></div>
 
   <input type="file" id="sfInput" multiple accept="application/pdf,image/*" style="display:none">
   <div id="toast"></div>
@@ -1613,7 +1636,7 @@ function wireSearch(inputId, itemSel, labelSel, extraSel){
 }
 wireSearch('trendsSearch','#trendsBody .trow','#trendsBody .sec-label');
 wireSearch('reportsSearch','#reportsBody .rrow','#reportsBody .sec-label','#reportsBody .gp-card');
-wireSearch('diarySearch','#jList .j-note','#scr-journal .sec-label');
+/* diary search is handled by renderDiary (oninput) in the v2 diary */
 
 /* ================= person pickers (Trends / Reports / Diary) ================= */
 const AV_INITS=['AE','S','K'];
@@ -2584,7 +2607,7 @@ function rebuildWorld(){
     const dset=[...new Set(reps.map(r=>fmtTL(r.dateISO)))];
     const dTimes=dset.map(l=>+new Date(reps.find(r=>fmtTL(r.dateISO)===l).dateISO));
     const dmin=Math.min(...dTimes,Infinity),dmax=Math.max(...dTimes,-Infinity);
-    TL_POINTS[mem.id]=dset.map((l,j)=>({lbl:l,x:dset.length===1?50:(8+(dTimes[j]-dmin)/(dmax-dmin)*80)}));
+    TL_POINTS[mem.id]=dset.map((l,j)=>({lbl:l,t:dTimes[j],x:dset.length===1?50:(8+(dTimes[j]-dmin)/(dmax-dmin)*80)}));
     dset.forEach(l=>{
       const rIds=reps.filter(r=>fmtTL(r.dateISO)===l).map(r=>r.id);
       const rws=reads.filter(r=>rIds.includes(r.reportId)).map(r=>{
@@ -2626,11 +2649,12 @@ function renderTimelines(){
    ['tlReports',date=>{SEL_DATE=date;renderReports();}]].forEach(([id,cb])=>{
     const el=document.getElementById(id);
     if(!pts.length){el.innerHTML='';return;}
-    el.innerHTML='<button class="tlall on">All</button><div class="tlbar"><div class="tlline"></div>'
-      +pts.map(p=>'<button class="tldot" data-d="'+p.lbl+'" style="left:'+p.x+'%"><i></i><small>'+p.lbl+'</small></button>').join('')+'</div>';
-    const all=el.querySelector('.tlall');const dots=[...el.querySelectorAll('.tldot')];
-    all.addEventListener('click',()=>{all.classList.add('on');dots.forEach(d=>d.classList.remove('on'));cb(null);});
-    dots.forEach(d=>d.addEventListener('click',()=>{all.classList.remove('on');dots.forEach(x=>x.classList.toggle('on',x===d));cb(d.dataset.d);}));
+    /* readable, scrollable date chips (newest first) — no more overlapping labels */
+    const chron=pts.slice().sort((a,b)=>(b.t||0)-(a.t||0));
+    el.innerHTML='<div class="tlchips"><button class="tlchip on" data-d="">All</button>'
+      +chron.map(p=>'<button class="tlchip" data-d="'+p.lbl+'">'+p.lbl+'</button>').join('')+'</div>';
+    const chips=[...el.querySelectorAll('.tlchip')];
+    chips.forEach(c=>c.addEventListener('click',()=>{chips.forEach(x=>x.classList.toggle('on',x===c));cb(c.dataset.d||null);}));
   });
 }
 /* likely-duplicate detection: same member + same day + clinic + panel + value count.
@@ -2776,25 +2800,96 @@ async function reviewDrop(id){
   const left=RAW.readings.filter(x=>x.memberId===mk&&x.needsReview).length;
   if(left)openReview(mk);else{closeReview();toast('Removed');}
 }
+let DIARY_VIEW='cards',DIARY_FILTER='all';
+const DTYPE={note:'Note',rx:'Prescription',doc:'Document'};
+function eType(n){return n.type||'note';}
+function diaryMatch(n){
+  if(DIARY_FILTER!=='all'&&eType(n)!==DIARY_FILTER&&n.type!=='pending'&&n.type!=='ask')return false;
+  const q=(document.getElementById('diarySearch').value||'').trim().toLowerCase();
+  if(!q)return true;
+  return ((n.title||'')+' '+(n.text||'')+' '+(n.ocr||'')+' '+(n.where||'')+' '+(n.source||'')).toLowerCase().includes(q);
+}
 function renderDiary(){
   const m=MEMBERS[typeof idx==='number'?idx:0];if(!m)return;
-  const rems=RAW.reminders.filter(r=>r.memberId===m.key);
-  const notes=RAW.notes.filter(n=>n.memberId===m.key).sort((a,b)=>new Date(b.dateISO)-new Date(a.dateISO));
-  document.getElementById('remList').innerHTML=rems.map(r=>
-    '<div class="rem-row"><svg viewBox="0 0 24 24"><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6"/><path d="M10 19a2 2 0 0 0 4 0"/></svg>'
-    +'<div class="t"><b>'+r.title+'</b><small>'+r.source+'</small></div><span class="rem-when">'+r.due+'</span></div>').join('');
-  document.getElementById('jList').innerHTML=notes.map(n=>
-    '<div class="j-note"><p>'+n.text.replace(/</g,'&lt;')+'</p>'
-    +'<div class="j-meta"><span class="j-date">'+fmtDL(n.dateISO)+' · '+n.source+'</span>'
-    +(n.sysTag?'<span class="j-tag">'+n.sysTag+'</span>':'')
-    +(n.autoMeta?'<span class="j-auto">'+n.autoMeta+'</span>':'')+'</div></div>').join('');
-  const labels=document.querySelectorAll('#scr-journal .sec-label');
-  if(labels[0])labels[0].style.display=rems.length?'block':'none';
-  if(labels[1])labels[1].style.display=notes.length?'block':'none';
+  const all=RAW.notes.filter(n=>n.memberId===m.key).sort((a,b)=>new Date(b.dateISO)-new Date(a.dateISO));
+  const notes=all.filter(diaryMatch);
+  const camSvg='<svg class="en-cam" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v12H4z"/><circle cx="12" cy="13.5" r="3.2"/></svg>';
+  const list=document.getElementById('jList'),ledger=document.getElementById('jLedger');
+  /* CARDS */
+  let mon='';let h='';
+  notes.forEach(n=>{
+    const d=new Date(n.dateISO),ml=fmtTL(n.dateISO);
+    if(ml!==mon){mon=ml;h+='<div class="sec-label">'+(ml===fmtTL(new Date())?'This month':ml)+'</div>';}
+    const t=eType(n);
+    const title=n.title||(n.text?n.text.slice(0,60):(t==='rx'?'Prescription':t==='doc'?'Document':'Note'));
+    h+='<div class="en" onclick="openEntry(\''+n.id+'\')">'
+      +'<b class="en-t">'+String(title).replace(/</g,'&lt;')+'</b>'
+      +(n.text&&n.title?'<p class="en-b">'+n.text.replace(/</g,'&lt;')+'</p>':(n.body?'<p class="en-b">'+n.body.replace(/</g,'&lt;')+'</p>':''));
+    if(n.type==='ask'){
+      h+='<div class="en-wt"><small>Klario AI is offline — what’s this?</small><div class="c">'
+        +'<button onclick="event.stopPropagation();diaryTag(\''+n.id+'\',\'rx\')">Prescription</button>'
+        +'<button onclick="event.stopPropagation();diaryTag(\''+n.id+'\',\'doc\')">Document</button>'
+        +'<button onclick="event.stopPropagation();diaryTag(\''+n.id+'\',\'note\')">Note</button></div></div>';
+    }
+    h+='<div class="en-meta"><span class="en-d">'+(n.photoBuf?camSvg:'')+fmtDL(n.dateISO)+(n.where?' · '+n.where:(n.source&&n.source!=='typed'?' · '+n.source:''))+'</span>'
+      +(n.type==='pending'?'<span class="en-shim">Reading…</span>':(n.type!=='ask'?'<span class="en-tag">'+(DTYPE[t]||'Note')+'</span>':''))
+      +(n.remindDue?'<span class="en-remind" onclick="event.stopPropagation();toast(\'Reminder set · '+n.remindDue+'\')">Remind · '+n.remindDue+'</span>':(n.autoMeta?'<span class="en-tag" style="border-style:dashed">'+n.autoMeta+'</span>':''))
+      +(n.sysTag?'<span class="en-tag">'+n.sysTag+'</span>':'')
+      +'</div></div>';
+  });
+  list.innerHTML=h;
+  /* LEDGER */
+  let l='<div class="lhead"><span class="w">When</span><span class="x">What</span><span class="k">Type</span></div>';
+  notes.forEach(n=>{
+    const t=eType(n);
+    l+='<div class="lrow" onclick="openEntry(\''+n.id+'\')"><span class="w">'+fmtD(n.dateISO)+'</span>'
+      +'<span class="x">'+String(n.title||n.text||'').replace(/</g,'&lt;').slice(0,60)+(n.where?'<small>'+n.where+'</small>':(n.sysTag?'<small>'+n.sysTag+'</small>':''))+'</span>'
+      +'<span class="k">'+(n.type==='pending'?'<span class="en-shim">Reading…</span>':(n.type==='ask'?'<span class="en-tag">Photo</span>':'<span class="en-tag">'+(DTYPE[t]||'Note')+'</span>'))+'</span></div>';
+  });
+  ledger.innerHTML=l;
+  list.style.display=DIARY_VIEW==='cards'?'block':'none';
+  ledger.style.display=DIARY_VIEW==='table'?'block':'none';
   const de=document.getElementById('diaryEmpty');
-  de.style.display=(notes.length||rems.length)?'none':'block';
-  de.innerHTML='No diary entries for '+m.name+' yet.<br>Doctor advice, symptoms, sleep — anything worth remembering.';
-  const rn=document.getElementById('remNote');if(rn)rn.style.display='none';
+  de.style.display=notes.length?'none':'block';
+  de.innerHTML=all.length?'Nothing matches that filter.':('No diary entries for '+m.name+' yet.<br>Doctor advice, symptoms, a photo of a prescription — anything worth remembering.');
+}
+function diaryView(v,btn){DIARY_VIEW=v;document.querySelectorAll('#scr-journal .vtog button').forEach(b=>b.classList.toggle('on',b===btn));renderDiary();}
+function diaryFilter(btn){DIARY_FILTER=btn.dataset.f;document.querySelectorAll('#dvChips button').forEach(b=>b.classList.toggle('on',b===btn));renderDiary();}
+/* ---------- photo capture ---------- */
+function diaryCapture(){document.getElementById('dvPhoto').click();}
+async function diaryPhotoChosen(file){
+  const m=MEMBERS[idx];if(!m){toast('Finish setup first');return;}
+  const buf=await file.arrayBuffer();
+  const n={id:uid(),memberId:m.key,type:'pending',title:'Photo · reading…',text:'',dateISO:new Date().toISOString(),
+    source:'camera',photoBuf:buf,photoType:file.type||'image/jpeg',sysTag:null,autoMeta:null};
+  await DB.put('notes',n);RAW.notes.push(n);renderDiary();
+  toast('Photo saved — reading it…');
+  /* AI vision tagging when available; otherwise ask the user */
+  let done=false;
+  if(CLOUD&&SESSION&&CFG.AI_ENABLED){
+    try{
+      const out=await aiAssist('tagphoto',{});   // placeholder — real vision call added when ai-assist supports images
+      if(out&&out.type){n.type=out.type;n.title=out.title||n.title;n.where=out.where||null;n.ocr=out.ocr||'';done=true;}
+    }catch(e){}
+  }
+  if(!done){n.type='ask';n.title='Photo captured';}
+  await DB.put('notes',n);
+  const i=RAW.notes.findIndex(x=>x.id===n.id);if(i>=0)RAW.notes[i]=n;
+  renderDiary();
+}
+async function diaryTag(id,t){
+  const n=RAW.notes.find(x=>x.id===id);if(!n)return;
+  n.type=t;n.title=t==='rx'?'Prescription':t==='doc'?'Medical document':'Photo note';
+  await DB.put('notes',n);renderDiary();
+  toast('Saved as '+DTYPE[t]);
+}
+function openEntry(id){
+  const n=RAW.notes.find(x=>x.id===id);if(!n)return;
+  if(n.photoBuf){
+    const url=URL.createObjectURL(new Blob([n.photoBuf],{type:n.photoType||'image/jpeg'}));
+    document.getElementById('dvPhotoImg').src=url;
+    document.getElementById('dvPhotoView').classList.add('on');
+  } else if(n.text){ toast(n.text.slice(0,120)); }
 }
 function renderFamily(){
   const body=document.querySelector('#scr-family .scr-body');
@@ -2984,10 +3079,14 @@ async function addNote(){
   const m=MEMBERS[idx];if(!m){toast('Finish setup first');return;}
   const low=v.toLowerCase();
   let sysTag=null;
-  for(const {a,name} of ALIAS_LIST){if(low.includes(a)){sysTag=ZONES.find(z=>z.id===MARKERS[name].sys).name;break;}}
-  if(!sysTag){const z=ZONES.find(z=>low.includes(z.name.toLowerCase().split(' ')[0]));if(z)sysTag=z.name;}
+  /* match whole words only, and ignore 1–2 letter aliases (e.g. 'k','na') that hit inside words like 'recheck' */
+  for(const {a,name} of ALIAS_LIST){if(a.length>=4&&new RegExp('(^|[^a-z])'+a.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'([^a-z]|$)','i').test(low)){sysTag=ZONES.find(z=>z.id===MARKERS[name].sys).name;break;}}
+  if(!sysTag){const z=ZONES.find(z=>{const w=z.name.toLowerCase().split(' ')[0];return w.length>=4&&new RegExp('(^|[^a-z])'+w+'([^a-z]|$)','i').test(low);});if(z)sysTag=z.name;}
+  /* common lay terms → system */
+  if(!sysTag){const LAY=[[/lipid|cholesterol|statin|heart|blood pressure|\bbp\b/,'cardio'],[/sleep|migraine|headache|mood|anxiety|dizz/,'brain'],[/sugar|diabet|glucose|hba1c|weight/,'metab'],[/thyroid/,'thyroid'],[/kidney|urine|renal/,'kidney'],[/liver/,'liver'],[/joint|shoulder|knee|back pain|muscle/,'msk']];
+    for(const [re,sys] of LAY){if(re.test(low)){const z=ZONES.find(z=>z.id===sys);if(z){sysTag=z.name;break;}}}}
   const isRem=/remind|recheck|re-check|book|follow.?up/i.test(v);
-  const note={id:uid(),memberId:m.key,text:v,dateISO:new Date().toISOString(),source:'typed',sysTag,
+  const note={id:uid(),memberId:m.key,type:'note',text:v,dateISO:new Date().toISOString(),source:'typed',sysTag,
     autoMeta:isRem?'Reminder created':null};
   await DB.put('notes',note);RAW.notes.push(note);
   if(isRem){
