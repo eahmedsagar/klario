@@ -204,11 +204,11 @@
     text-align:left;font-family:inherit}
   .tile b{display:block;font-size:12.5px;font-weight:700}
   .tile.att b{color:var(--warn-ink)} .tile.watch b{color:var(--watch-ink)}
-  .tile.good b{color:var(--good-ink)} .tile.nodata b{color:var(--ink-3)}
+  .tile.good b{color:var(--good-ink)} .tile.nodata b{color:var(--ink-3)} .tile.na b{color:var(--ink-2)}
   .tile small{font-size:10.5px;color:var(--ink-3);margin-top:3px;display:block}
   .tile .st{font-size:8.5px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;margin-top:7px;display:block}
   .tile.att .st{color:var(--warn)} .tile.watch .st{color:var(--watch)}
-  .tile.good .st{color:var(--good)} .tile.nodata .st{color:var(--ink-3)}
+  .tile.good .st{color:var(--good)} .tile.nodata .st{color:var(--ink-3)} .tile.na .st{color:var(--ink-3)}
 
   .who-cap{text-align:center;padding:0 22px 9px}
   .who-cap h2{font-size:18px;font-weight:800}
@@ -334,6 +334,7 @@
   .dir.bad{background:rgba(236,131,90,.14);color:var(--serious)}
   .dir.watch{background:rgba(127,184,255,.14);color:var(--watch)}
   .dir.ok{background:rgba(34,211,106,.11);color:var(--good)}
+  .dir.na{background:rgba(255,255,255,.06);color:var(--ink-3)}
   .cnt{font-size:11px;font-weight:800;color:var(--warn);flex:0 0 auto}
   .chev{color:var(--ink-3);flex:0 0 auto}
   .gp-card{background:linear-gradient(135deg,#123a6b,#1c5aa8);border-radius:20px;padding:16px;display:flex;gap:13px;
@@ -638,6 +639,7 @@
   .status-pill.watch{background:rgba(127,184,255,.13);color:var(--watch);border:1px solid rgba(127,184,255,.35)}
   .status-pill.good{background:rgba(34,211,106,.13);color:var(--good);border:1px solid rgba(34,211,106,.3)}
   .status-pill.nodata{background:rgba(255,255,255,.06);color:var(--ink-3);border:1px solid var(--hair-2)}
+  .status-pill.na{background:rgba(255,255,255,.06);color:var(--ink-2);border:1px solid var(--hair-2)}
   .sheet-body{overflow-y:auto;padding:6px 18px 26px}
   .summary{font-size:13px;color:var(--ink-2);line-height:1.5;padding:14px 4px 6px}
   .summary b{color:var(--ink)}
@@ -653,6 +655,7 @@
   .flag.lo{background:rgba(127,184,255,.14);color:var(--watch)}
   .flag.ok{background:rgba(34,211,106,.13);color:var(--good)}
   .flag.dr{background:rgba(127,184,255,.14);color:var(--watch)}
+  .flag.na{background:rgba(255,255,255,.06);color:var(--ink-3)}
   .marker .meta{font-size:10px;color:var(--ink-3)}
   .chart{margin-top:12px}
   .chart svg{width:100%;height:132px;display:block;overflow:visible}
@@ -908,7 +911,7 @@
         <button class="set-row" onclick="applyTheme(!ISLIGHT)" id="appearanceRow">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/></svg>
           <div class="t"><b>Appearance</b><small id="setTheme">Dark</small></div><span class="chev">›</span></button>
-        <div style="text-align:center;font-size:10px;color:var(--ink-3);padding:16px 0 4px" id="verStamp">Klario v0.8.8 · build 2026-07-12o</div>
+        <div style="text-align:center;font-size:10px;color:var(--ink-3);padding:16px 0 4px" id="verStamp">Klario v0.8.9 · build 2026-07-12p</div>
       </div>
     </div>
 
@@ -1354,7 +1357,7 @@ function T(){
     baseOp:.16,varOp:.5
   };
 }
-function stCol(st){const th=T();return st==='att'?th.att:(st==='watch'?th.watch:th.good);}
+function stCol(st){const th=T();return st==='att'?th.att:(st==='watch'?th.watch:(st==='na'?th.tick:th.good));}
 function LC(st){
   return ISLIGHT
     ?({att:'rgba(176,118,0,.55)',watch:'rgba(63,127,214,.5)',good:'rgba(12,138,12,.45)',nodata:'rgba(15,30,60,.2)'})[st]
@@ -1470,14 +1473,14 @@ function tileHead(mKey,sysId){
   const arrow=mk.hist[mk.hist.length-1]>mk.hist[0]?' ↑':(mk.hist[mk.hist.length-1]<mk.hist[0]?' ↓':'');
   return `${mk.name} ${mk.val}${arrow}`;
 }
-const ST_TXT={crit:'Critical',att:'Needs attention',watch:'Watch',good:'In range',nodata:'No data'};
-const ST_ORDER={crit:0,att:1,watch:2,good:3,nodata:4};
+const ST_TXT={crit:'Critical',att:'Needs attention',watch:'Watch',good:'In range',na:'Logged',nodata:'No data'};
+const ST_ORDER={crit:0,att:1,watch:2,good:3,na:3.5,nodata:4};
 function tilesHTML(m){
   return ZONES
-    .map(s=>({s,st:m.baby?'nodata':(m.status[s.id]||'nodata')}))
+    .map(s=>({s,st:(m.status[s.id]||'nodata')}))
     .sort((a,b)=>ST_ORDER[a.st]-ST_ORDER[b.st])
     .map(({s,st})=>{
-      const head=m.baby?'—':(tileHead(m.key,s.id)||'No markers yet');
+      const head=(tileHead(m.key,s.id)||'No markers yet');
       return `<button class="tile ${st}" data-sys="${s.id}"><b>${s.name}</b><small>${head}</small><span class="st">${ST_TXT[st]}</span></button>`;
     }).join('');
 }
@@ -1516,7 +1519,7 @@ MEMBERS.forEach((m,i)=>{
   });
   const ins=p.querySelector('.insight');
   if(ins)ins.addEventListener('click',()=>{
-    if(m.baby||!(STORIES[m.key]&&STORIES[m.key].length)) toast(m.baby?'Add a report to start Kai\'s insights':'No open insights');
+    if(!(STORIES[m.key]&&STORIES[m.key].length)) toast('No open insights');
     else openStories(m.key);
   });
 });
@@ -1711,15 +1714,16 @@ function parseRef(ref){
   return{};
 }
 function readingStatus(v,band,isLast,flag){
+  if(flag==='na')return 'na';                 // infant marker with no report range → not assessed (neutral dot)
   if(isLast&&flag==='dr')return 'dr';
   if(band.hi!==undefined&&v>band.hi)return 'hi';
   if(band.lo!==undefined&&v<band.lo)return 'lo';
   return 'ok';
 }
-function DOT(st){const th=T();return{ok:th.good,hi:th.att,lo:th.att,dr:th.watch}[st];}
-const TRI={hi:'▲',lo:'▼',ok:'●',dr:'◆'};
-const ST_WORD={hi:'HIGH',lo:'LOW',ok:'IN RANGE',dr:'DRIFTING'};
-const ST_WORD_COL={hi:'var(--warn)',lo:'var(--warn)',ok:'var(--good)',dr:'var(--watch)'};
+function DOT(st){const th=T();return{ok:th.good,hi:th.att,lo:th.att,dr:th.watch,na:th.tick}[st]||th.tick;}
+const TRI={hi:'▲',lo:'▼',ok:'●',dr:'◆',na:'–'};
+const ST_WORD={hi:'HIGH',lo:'LOW',ok:'IN RANGE',dr:'DRIFTING',na:'LOGGED'};
+const ST_WORD_COL={hi:'var(--warn)',lo:'var(--warn)',ok:'var(--good)',dr:'var(--watch)',na:'var(--ink-3)'};
 function fmtTick(v){return Math.abs(v)>=100?Math.round(v):(Math.round(v*10)/10);}
 
 function chart(mk,mIdx,memberKey){
@@ -1797,13 +1801,13 @@ function tableHTML(mk,sts,mIdx,memberKey){
     <div class="mk-foot">Each reading is judged against the reference range of the lab that produced it — ranges can differ between clinics.</div>
   </div>`;
 }
-const PILL_TEXT={att:'Needs attention',watch:'Watch',good:'In range',nodata:'No data yet'};
+const PILL_TEXT={att:'Needs attention',watch:'Watch',good:'In range',na:'Logged · infant range not on report',nodata:'No data yet'};
 function openSheet(mKey,sysId){
   const sys=ZONES.find(z=>z.id===sysId);if(!sys)return;
   const member=MEMBERS.find(x=>x.key===mKey);
   const d=SHEETS[mKey+':'+sysId];
   lastSheet={mKey,sysId};
-  const st=d?d.status:(member.baby?'nodata':(member.status[sysId]||'nodata'));
+  const st=d?d.status:(member.status[sysId]||'nodata');
   document.getElementById('shTitle').textContent=sys.name;
   {const sub=document.getElementById('shSub');sub.style.display='';sub.textContent=d?d.sub:(member.baby?member.name+' · no reports yet':'Not tracked yet');}
   const pill=document.getElementById('shPill');
@@ -1828,7 +1832,7 @@ function openSheet(mKey,sysId){
       </details>`;
     }
     d.markers.forEach((mk,mi)=>{
-      const fl={hi:'HIGH',lo:'LOW',ok:'IN RANGE',dr:'DRIFTING'}[mk.flag];
+      const fl=ST_WORD[mk.flag]||'IN RANGE';
       const ch=chart(mk,mi,mKey);
       charts.push({mk,sts:ch.sts});
       html+=`<div class="marker">
@@ -2533,6 +2537,14 @@ function stOfReading(v,lo,hi){
   if(lo!==undefined&&lo!==null&&v<lo)return 'lo';
   return 'ok';
 }
+/* Did this reading's reference range come from the report itself (vs Klario's built-in ADULT default)?
+   Stored explicitly as refFromPdf on new readings; for older readings, infer by comparing to the adult default. */
+function refIsFromReport(r){
+  if(r.refFromPdf!==undefined&&r.refFromPdf!==null)return !!r.refFromPdf;
+  const md=MARKERS[r.marker];if(!md)return true;
+  const eq=(a,b)=>((a==null&&b==null)||a===b);
+  return !(eq(r.refLo,md.lo??undefined)&&eq(r.refHi,md.hi??undefined));  // differs from adult default ⇒ from report
+}
 function markerFlag(reads){
   const last=reads[reads.length-1];
   let st=stOfReading(last.value,last.refLo,last.refHi);
@@ -2568,6 +2580,7 @@ function firstName(n){return (n||'').trim().split(/\s+/)[0];}
 function rebuildWorld(){
   MEMBERS=[];SHEETS={};STORIES={};TRENDS_BY={};TRENDS_SUB={};DATE_RESULTS={};TL_POINTS={};
   RAW.members.forEach((mem,i)=>{
+    const isBaby=ageOf(mem.dob)!==null&&ageOf(mem.dob)<3;
     const reads=RAW.readings.filter(r=>r.memberId===mem.id).sort((a,b)=>new Date(a.dateISO)-new Date(b.dateISO));
     const reps=RAW.reports.filter(r=>r.memberId===mem.id).sort((a,b)=>new Date(a.dateISO)-new Date(b.dateISO));
     const byMarker={};
@@ -2579,8 +2592,11 @@ function rebuildWorld(){
     ZONES.forEach(z=>{if(z.id)sysMarkers[z.id]=[];});
     Object.entries(byMarker).forEach(([name,rs])=>{
       const md=MARKERS[name];if(!md)return;
-      const fl=markerFlag(rs);
       const last=rs[rs.length-1];
+      /* Infants: adult reference ranges don't apply. Only assess (colour-code) a marker when the
+         report itself provided the range (i.e. the lab's own age-appropriate range). Otherwise mark
+         it 'na' (Logged, not assessed) so we never show a false infant flag — or false reassurance. */
+      const fl=(isBaby&&!refIsFromReport(last))?'na':markerFlag(rs);
       /* spread THIS marker's own readings across the full chart width (left→right by its own dates),
          not squeezed into the corner of the member's entire history */
       const mt=rs.map(r=>+new Date(r.dateISO));
@@ -2601,17 +2617,22 @@ function rebuildWorld(){
     ZONES.forEach(z=>{
       const mks=sysMarkers[z.id]||[];
       if(!mks.length)return;
-      const worst=mks.some(m=>m.flag==='hi'||m.flag==='lo')?'att':(mks.some(m=>m.flag==='dr')?'watch':'good');
+      const assess=mks.filter(m=>m.flag!=='na');          // markers we can validly judge (adult, or infant w/ report range)
+      const worst=!assess.length?'na'
+        :(assess.some(m=>m.flag==='hi'||m.flag==='lo')?'att':(assess.some(m=>m.flag==='dr')?'watch':'good'));
       status[z.id]=worst;
-      mks.sort((a,b)=>({hi:0,lo:0,dr:1,ok:2}[a.flag]-{hi:0,lo:0,dr:1,ok:2}[b.flag]));
-      const off=mks.filter(m=>m.flag!=='ok');
+      mks.sort((a,b)=>({hi:0,lo:0,dr:1,ok:2,na:4}[a.flag]-{hi:0,lo:0,dr:1,ok:2,na:4}[b.flag]));
+      const off=mks.filter(m=>m.flag!=='ok'&&m.flag!=='na');
+      const nNa=mks.filter(m=>m.flag==='na').length;
       const key=mem.id+':'+z.id;
       const latestD=mks.map(m=>m.rd[m.rd.length-1].d).sort().pop();
       const sum= worst==='att'
-        ? '<b>'+off.map(m=>m.name+' is '+({hi:'high',lo:'low',dr:'drifting'}[m.flag])).slice(0,3).join(', ')+'.</b> '+(mks.length-off.length>0?(mks.length-off.length)+' other marker'+(mks.length-off.length>1?'s':'')+' in range.':'')
+        ? '<b>'+off.map(m=>m.name+' is '+({hi:'high',lo:'low',dr:'drifting'}[m.flag])).slice(0,3).join(', ')+'.</b> '+(mks.length-off.length>0?(mks.length-off.length)+' other marker'+(mks.length-off.length>1?'s':'')+' recorded.':'')
         : worst==='watch'
         ? '<b>'+off.map(m=>m.name).join(', ')+' still in range but drifting</b> across recent tests — worth watching.'
-        : 'All <b>'+mks.length+' marker'+(mks.length>1?'s':'')+' in range.</b>';
+        : worst==='na'
+        ? '<b>'+mks.length+' marker'+(mks.length>1?'s':'')+' logged.</b> Infant reference ranges weren’t on the report, so Klario hasn’t judged these — confirm with your paediatrician.'
+        : 'All <b>'+mks.length+' marker'+(mks.length>1?'s':'')+' in range.</b>'+(nNa?' ('+nNa+' logged without an infant range)':'');
       SHEETS[key]={
         sub:mks.length+' marker'+(mks.length>1?'s':'')+' · latest '+mks[0].rd[mks[0].rd.length-1].d,
         status:worst,summary:sum,markers:mks,
@@ -2626,7 +2647,7 @@ function rebuildWorld(){
     const watchS=ZONES.filter(z=>status[z.id]==='watch').map(z=>z.id);
     const noteFor=zid=>{const zn=ZONES.find(z=>z.id===zid).name;
       const n=notes.find(n=>n.sysTag===zn);return n?{date:fmtD(n.dateISO).replace(/ \d\d$/,''),txt:n.text.slice(0,60)+(n.text.length>60?'…':'')}:null;};
-    const mkList=zid=>(sysMarkers[zid]||[]).filter(m=>m.flag!=='ok');
+    const mkList=zid=>(sysMarkers[zid]||[]).filter(m=>m.flag!=='ok'&&m.flag!=='na');
     const mref=m=>(m.ref&&m.ref!=='—')?', ref '+m.ref:'';
     const ageAgo=iso=>{if(!iso)return '';const then=new Date(iso),now=new Date();
       let mo=(now.getFullYear()-then.getFullYear())*12+(now.getMonth()-then.getMonth());
@@ -2674,25 +2695,29 @@ function rebuildWorld(){
       insight:stories.length
         ?{cls:stories[0].status==='att'?'a':'w',sys:stories[0].primary,
           html:'<b>'+stories[0].head+'.</b> '+(stories[0].teaser||stories[0].body.slice(0,70))}
-        :{cls:'m',sys:null,html:hasData
-          ?'<b>All in range.</b> Nothing needs your attention right now.'
-          :'<b>No labs yet.</b> Scan a report and '+firstName(mem.name)+'’s body lights up with real results.'}
+        :{cls:'m',sys:null,html:!hasData
+          ?'<b>No labs yet.</b> Scan a report and '+firstName(mem.name)+'’s body lights up with real results.'
+          :(ZONES.some(z=>['att','watch','good'].includes(status[z.id]))
+            ?'<b>All in range.</b> Nothing needs your attention right now.'
+            :'<b>Results logged.</b> Infant reference ranges vary by age — Klario records '+firstName(mem.name)+'’s values but leaves clinical judgement to your paediatrician.')}
     });
     /* trends */
-    const rows=[];const grp={att:[],watch:[],good:[]};
+    const rows=[];const grp={att:[],watch:[],good:[],na:[]};
     ZONES.forEach(z=>{
       const mks=sysMarkers[z.id]||[];if(!mks.length)return;
       const st=status[z.id];const worst=mks[0];
-      const off=mks.filter(m=>m.flag!=='ok').length;
+      if(!grp[st])return;
+      const off=mks.filter(m=>m.flag!=='ok'&&m.flag!=='na').length;
       const rising=worst.hist.length>1&&worst.hist[worst.hist.length-1]>worst.hist[0];
       grp[st].push({name:z.name,sys:z.id,cnt:off?String(off):'',hist:worst.hist.length>1?worst.hist:[worst.hist[0],worst.hist[0]],
-        sub:st==='att'?(off+' of '+mks.length+' markers off-range'):st==='watch'?(worst.name+' drifting — in range'):'All in range',
-        dir:st==='att'?'bad':st==='watch'?'watch':'ok',
-        dirTxt:st==='att'?(rising?'↑ worsening':'→ off range'):st==='watch'?'→ drifting':'→ steady'});
+        sub:st==='att'?(off+' of '+mks.length+' markers off-range'):st==='watch'?(worst.name+' drifting — in range'):st==='na'?(mks.length+' logged — infant range not on report'):'All in range',
+        dir:st==='att'?'bad':st==='watch'?'watch':st==='na'?'na':'ok',
+        dirTxt:st==='att'?(rising?'↑ worsening':'→ off range'):st==='watch'?'→ drifting':st==='na'?'– logged':'→ steady'});
     });
     if(grp.att.length)rows.push({sec:'Moving the wrong way'},...grp.att);
     if(grp.watch.length)rows.push({sec:'Watching'},...grp.watch);
     if(grp.good.length)rows.push({sec:'Steady & in range'},...grp.good);
+    if(grp.na.length)rows.push({sec:'Logged · infant ranges'},...grp.na);
     TRENDS_BY[mem.id]=rows;
     TRENDS_SUB[mem.id]=firstName(mem.name)+' · '+reads.length+' reading'+(reads.length===1?'':'s')+' · '+Object.keys(byMarker).length+' markers';
     /* timeline */
@@ -2703,8 +2728,9 @@ function rebuildWorld(){
     dset.forEach(l=>{
       const rIds=reps.filter(r=>fmtTL(r.dateISO)===l).map(r=>r.id);
       const rws=reads.filter(r=>rIds.includes(r.reportId)).map(r=>{
-        const st=stOfReading(r.value,r.refLo,r.refHi);
-        return [r.marker,r.value+' '+(MARKERS[r.marker]?MARKERS[r.marker].unit:''),r.refText||'—',st==='hi'?'H':st==='lo'?'L':'ok'];});
+        const assessable=!(isBaby&&!refIsFromReport(r));   // infant + no report range → not assessed
+        const st=assessable?stOfReading(r.value,r.refLo,r.refHi):'na';
+        return [r.marker,r.value+' '+(MARKERS[r.marker]?MARKERS[r.marker].unit:''),r.refText||'—',st==='hi'?'H':st==='lo'?'L':st==='na'?'–':'ok'];});
       DATE_RESULTS[mem.id+':'+l]={title:l+' · '+(reps.find(r=>fmtTL(r.dateISO)===l)||{}).clinic+' ('+firstName(mem.name)+')',rows:rws};
     });
   });
@@ -3410,7 +3436,7 @@ async function sfDoFile(){
     await DB.put('reports',rep);RAW.reports.push(rep);
     for(const v of p.values){
       const rd={id:uid(),memberId,reportId:rep.id,marker:v.marker,value:v.value,
-        refLo:v.refLo,refHi:v.refHi,refText:v.refText,lab:p.clinic,clinic:p.clinic,dateISO:rep.dateISO,
+        refLo:v.refLo,refHi:v.refHi,refText:v.refText,refFromPdf:v.refFromPdf!==false,lab:p.clinic,clinic:p.clinic,dateISO:rep.dateISO,
         unitRaw:v.unitRaw||null,
         needsReview:!!v.needsReview,conf:(v.conf!=null?v.conf:1),warn:(v.warn||[]).join(','),src:v.src||null};
       await DB.put('readings',rd);RAW.readings.push(rd);
