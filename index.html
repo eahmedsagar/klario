@@ -911,7 +911,11 @@
         <button class="set-row" onclick="applyTheme(!ISLIGHT)" id="appearanceRow">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/></svg>
           <div class="t"><b>Appearance</b><small id="setTheme">Dark</small></div><span class="chev">›</span></button>
-        <div style="text-align:center;font-size:10px;color:var(--ink-3);padding:16px 0 4px" id="verStamp">Klario v0.8.9 · build 2026-07-12p</div>
+        <button class="set-row" onclick="testAI()" id="aiTestRow">
+          <svg viewBox="0 0 24 24"><path d="M12 3l2.2 5.6L20 10l-5 3.5L16.5 20 12 16.5 7.5 20 9 13.5 4 10l5.8-1.4z"/></svg>
+          <div class="t"><b>Test Klario AI</b><small>Check the AI connection & see any error</small></div><span class="chev">›</span></button>
+        <div id="aiTestOut" style="display:none;font-size:12px;line-height:1.5;color:var(--ink-2);background:var(--bg-2);border:1px solid var(--hair);border-radius:12px;padding:12px 14px;margin:2px 0 8px;word-break:break-word"></div>
+        <div style="text-align:center;font-size:10px;color:var(--ink-3);padding:16px 0 4px" id="verStamp">Klario v0.9.0 · build 2026-07-12q</div>
       </div>
     </div>
 
@@ -3734,6 +3738,27 @@ openOriginalPdf=async function(rid){
   _openOriginalPdf(rid);
 };
 
+/* ---------- one-tap AI diagnostic (Settings → Test Klario AI) ---------- */
+async function testAI(){
+  const out=document.getElementById('aiTestOut');
+  out.style.display='block';
+  out.innerHTML='Testing Klario AI…';
+  const gates=[];
+  if(!CLOUD)gates.push('cloud layer off (no Supabase config)');
+  if(!SESSION)gates.push('not signed in');
+  if(!CFG.AI_ENABLED)gates.push('AI disabled in config.js');
+  if(gates.length){out.innerHTML='<b style="color:var(--warn)">Can’t reach the AI:</b> '+gates.join('; ')+'.';return;}
+  KLARIO_AI_ERR='';
+  const t0=Date.now();
+  const res=await aiAssist('tag',{text:'mild headache today, took paracetamol'});
+  const ms=Date.now()-t0;
+  if(res){
+    out.innerHTML='<b style="color:var(--good)">✓ Klario AI is working</b> ('+ms+'ms).<br>Sample reply: <code style="font-size:11px">'+JSON.stringify(res).slice(0,180).replace(/</g,'&lt;')+'</code>';
+  } else {
+    out.innerHTML='<b style="color:var(--warn)">✗ AI call failed</b> ('+ms+'ms).<br><b>Reason:</b> '+String(KLARIO_AI_ERR||'unknown').replace(/</g,'&lt;').slice(0,400)
+      +'<br><br><span style="color:var(--ink-3)">If this says “non-JSON” or “upstream”, the Edge Function reached Anthropic but the key/model/billing was rejected. Redeploy the logging version of ai-assist to see the exact status, or check the ANTHROPIC_API_KEY secret.</span>';
+  }
+}
 /* ---------- AI assist (graceful no-op when unavailable) ---------- */
 window.KLARIO_AI_ERR='';
 async function aiAssist(task,payload){
