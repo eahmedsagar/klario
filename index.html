@@ -397,6 +397,10 @@
     display:flex;align-items:center;justify-content:center;cursor:pointer;margin-left:6px}
   .fam-merge svg{width:17px;height:17px;stroke:var(--ink-3);fill:none;stroke-width:1.9}
   .fam-merge:active svg{stroke:var(--accent-2)}
+  .fam-del{flex:0 0 auto;width:34px;height:34px;border-radius:10px;border:1px solid var(--hair);background:transparent;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;margin-left:6px}
+  .fam-del svg{width:16px;height:16px;stroke:var(--ink-3);fill:none;stroke-width:1.9}
+  .fam-del:active svg{stroke:#e0563f}
   .add-first{display:block;margin:14px auto 0;background:var(--accent);color:#fff;border:none;
     border-radius:999px;padding:12px 20px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit}
   .rrow-del{position:absolute;top:0;right:0;bottom:0;width:96px;background:#c0442f;color:#fff;
@@ -915,7 +919,7 @@
           <svg viewBox="0 0 24 24"><path d="M12 3l2.2 5.6L20 10l-5 3.5L16.5 20 12 16.5 7.5 20 9 13.5 4 10l5.8-1.4z"/></svg>
           <div class="t"><b>Test Klario AI</b><small>Check the AI connection & see any error</small></div><span class="chev">›</span></button>
         <div id="aiTestOut" style="display:none;font-size:12px;line-height:1.5;color:var(--ink-2);background:var(--bg-2);border:1px solid var(--hair);border-radius:12px;padding:12px 14px;margin:2px 0 8px;word-break:break-word"></div>
-        <div style="text-align:center;font-size:10px;color:var(--ink-3);padding:16px 0 4px" id="verStamp">Klario v0.9.0 · build 2026-07-12q</div>
+        <div style="text-align:center;font-size:10px;color:var(--ink-3);padding:16px 0 4px" id="verStamp">Klario v0.9.1 · build 2026-07-12r</div>
       </div>
     </div>
 
@@ -3057,6 +3061,7 @@ function renderFamily(){
         +'<div class="t"><b>'+m.fullName+'</b><small>'+(m.relation||'Self')+(ageOf(m.dob)!==null?' · '+(m.baby?Math.max(1,Math.round((new Date()-new Date(m.dob))/2628e6))+' months':ageOf(m.dob)):'')+(nrep?' · '+nrep+' report'+(nrep>1?'s':''):'')+'</small></div>'
         +badge
         +((MEMBERS.length>1&&m.relation&&m.relation!=='Self')?'<button class="fam-merge" title="This is a duplicate — merge into someone" onclick="event.stopPropagation();openMergeFor(\''+m.key+'\')"><svg viewBox="0 0 24 24"><path d="M8 3v6a4 4 0 0 0 4 4 4 4 0 0 0 4-4V3M12 13v8M8 18l4 3 4-3"/></svg></button>':'')
+        +'<button class="fam-del" title="Remove this person" onclick="event.stopPropagation();deleteMemberPrompt(\''+m.key+'\')"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/></svg></button>'
         +'</div>';
     }).join('')
     +'<button class="add-btn" onclick="openAddMember()">+ Add family member</button>'
@@ -3064,6 +3069,40 @@ function renderFamily(){
     +'<div class="con-row" style="cursor:pointer" onclick="showScreen(\'connect\')">'
     +'<div class="t"><b>Devices & apps</b><small>Wearables & Apple Health — coming in a later version</small></div>'
     +'<span class="chev" style="margin-top:10px">›</span></div>';
+}
+/* ---------- delete a family member (+ their reports, readings, notes) ---------- */
+function deleteMemberPrompt(key){
+  const m=MEMBERS.find(x=>x.key===key);if(!m)return;
+  const nrep=RAW.reports.filter(r=>r.memberId===key).length;
+  const nnote=RAW.notes.filter(n=>n.memberId===key).length;
+  let ov=document.getElementById('delMemOv');
+  if(!ov){ov=document.createElement('div');ov.id='delMemOv';
+    ov.style.cssText='display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.55);align-items:center;justify-content:center;padding:24px';
+    ov.onclick=e=>{if(e.target===ov)ov.style.display='none';};
+    document.body.appendChild(ov);}
+  const what=(nrep?nrep+' report'+(nrep>1?'s':''):'profile')+(nnote?' and '+nnote+' diary '+(nnote>1?'entries':'entry'):'');
+  ov.innerHTML='<div style="background:var(--bg-2);border:1px solid var(--hair);border-radius:18px;padding:20px;max-width:340px;width:100%">'
+    +'<div style="font-size:16px;font-weight:800;color:var(--ink);margin-bottom:8px">Remove '+String(m.fullName).replace(/</g,'&lt;')+'?</div>'
+    +'<div style="font-size:13px;color:var(--ink-2);line-height:1.5;margin-bottom:16px">This permanently deletes their '+what+' and all results from Klario. This can’t be undone.</div>'
+    +'<div style="display:flex;gap:10px">'
+    +'<button onclick="document.getElementById(\'delMemOv\').style.display=\'none\'" style="flex:1;padding:13px;border-radius:12px;border:1px solid var(--hair);background:transparent;color:var(--ink);font-size:14px;font-weight:700;font-family:inherit">Cancel</button>'
+    +'<button onclick="confirmDeleteMember(\''+key+'\')" style="flex:1;padding:13px;border-radius:12px;border:none;background:#c0442f;color:#fff;font-size:14px;font-weight:700;font-family:inherit">Remove</button>'
+    +'</div></div>';
+  ov.style.display='flex';
+}
+async function confirmDeleteMember(key){
+  const ov=document.getElementById('delMemOv');if(ov)ov.style.display='none';
+  const m=RAW.members.find(x=>x.id===key);
+  const dels=[];
+  for(const r of RAW.readings.filter(x=>x.memberId===key)){await DB.del('readings',r.id);dels.push(['readings',r.id]);}
+  for(const r of RAW.reports.filter(x=>x.memberId===key)){await DB.del('reports',r.id);dels.push(['reports',r.id]);}
+  for(const n of RAW.notes.filter(x=>x.memberId===key)){await DB.del('notes',n.id);dels.push(['notes',n.id]);}
+  for(const rm of RAW.reminders.filter(x=>x.memberId===key)){await DB.del('reminders',rm.id);dels.push(['reminders',rm.id]);}
+  await DB.del('members',key);dels.push(['members',key]);
+  if(CLOUD){for(const d of dels)await _put('kv',{k:'outboxdel:'+d[0]+':'+d[1],store:d[0],id:d[1],t:Date.now()});if(typeof scheduleSync==='function')scheduleSync();}
+  idx=0;
+  await loadRaw();rebuildAll();renderFamily();
+  toast((m?firstName(m.name):'Member')+' removed');
 }
 /* ---------- add a family member directly (no report needed) ---------- */
 function amPick(btn,sel){document.querySelectorAll(sel+' button').forEach(b=>b.classList.toggle('on',b===btn));}
