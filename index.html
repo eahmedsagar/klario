@@ -905,7 +905,7 @@
         <button class="set-row" onclick="applyTheme(!ISLIGHT)" id="appearanceRow">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/></svg>
           <div class="t"><b>Appearance</b><small id="setTheme">Dark</small></div><span class="chev">›</span></button>
-        <div style="text-align:center;font-size:10px;color:var(--ink-3);padding:16px 0 4px" id="verStamp">Klario v0.8.4 · build 2026-07-12k</div>
+        <div style="text-align:center;font-size:10px;color:var(--ink-3);padding:16px 0 4px" id="verStamp">Klario v0.8.5 · build 2026-07-12l</div>
       </div>
     </div>
 
@@ -1315,8 +1315,21 @@ function makeSampler(id){
 }
 let seed=7; function rnd(){seed=(seed*16807)%2147483647;return (seed-1)/2147483646;}
 function inEll(x,y,z){const dx=(x-z.cx)/z.rx, dy=(y-z.cy)/z.ry; return dx*dx+dy*dy<=1;}
+/* The ZONE anchors are tuned for the ADULT silhouette (head at cy≈30). The BABY
+   silhouette is laid out completely differently (oversized head at cy≈150, short torso
+   206–300). Map adult body-space → baby body-space so organ dots land on the baby, not
+   floating above it. Calibrated: adult cy[26..201] → baby cy[128..290]; torso narrower. */
+function babyZone(z){return z?{cx:100+(z.cx-100)*0.85, cy:128+(z.cy-26)*0.926, rx:z.rx*0.85, ry:z.ry*0.9}:z;}
+function zonesFor(m){
+  if(!m||!m.baby) return ZONES;
+  return ZONES.map(s=>{const t=Object.assign({},s);
+    if(s.z) t.z=babyZone(s.z);
+    if(s.z2) t.z2=babyZone(s.z2);
+    if(s.ly!=null) t.ly=128+(s.ly-26)*0.926;
+    return t;});
+}
 function zoneOf(m,x,y){
-  for(const s of ZONES){
+  for(const s of zonesFor(m)){
     if(s.type==='rim') continue;
     const st=m.status[s.id]; if(!st) continue;
     if(inEll(x,y,s.z)||(s.z2&&inEll(x,y,s.z2))) return {sys:s,st};
@@ -1365,7 +1378,8 @@ function renderBody(m){
     bases[n%3]+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}" fill="${c}" opacity="${(th.baseOp+rnd()*(m.dim?.28:th.varOp)).toFixed(2)}"/>`;
   }
   let blooms='',defs='';
-  ZONES.forEach((s,zi)=>{
+  const Z=zonesFor(m);
+  Z.forEach((s,zi)=>{
     const st=m.status[s.id];
     if(!st||(st!=='att'&&st!=='watch')||s.type==='rim')return;
     [s.z,s.z2].filter(Boolean).forEach((z,k)=>{
@@ -1385,7 +1399,7 @@ function renderBody(m){
     });
   });
   let marks='';
-  ZONES.forEach(s=>{
+  Z.forEach(s=>{
     const st=m.status[s.id];
     if(s.type==='rim'||!st)return;
     [s.z,s.z2].filter(Boolean).forEach(z=>{
@@ -1436,7 +1450,7 @@ function labelsAndLines(m){
 }
 function spotsHTML(m){
   let out='';
-  ZONES.forEach(s=>{
+  zonesFor(m).forEach(s=>{
     const st=m.status[s.id];
     if((!st||st==='nodata')&&!m.baby)return;
     const pts=s.type==='rim'?[]:[s.z,s.z2].filter(Boolean);
