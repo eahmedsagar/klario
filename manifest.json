@@ -1,0 +1,13 @@
+{
+  "name": "Klario",
+  "short_name": "Klario",
+  "description": "Every lab test you've ever done, in one living picture of you.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0a0e18",
+  "theme_color": "#0a0e18",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
