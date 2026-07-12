@@ -42,7 +42,10 @@ Return ONLY JSON: {"sysTag":string,"isReminder":boolean,"reminderTitle":string|n
 Deno.serve(async (req) => {
   const cors = {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "authorization, content-type, apikey",
+    // must include x-client-info / x-supabase-api-version that supabase-js adds, or the
+    // browser blocks the request at preflight ("Failed to send a request to the Edge Function")
+    "Access-Control-Allow-Headers": "*, authorization, x-client-info, apikey, content-type, x-supabase-api-version",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
   };
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
 
