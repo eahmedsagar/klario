@@ -989,7 +989,7 @@
           <svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-.5 4"/><path d="M20 4v7h-7"/></svg>
           <div class="t"><b>Refresh app</b><small>Reload to get the latest version &amp; sync</small></div><span class="chev">›</span></button>
         <div id="aiTestOut" style="display:none;font-size:12px;line-height:1.5;color:var(--ink-2);background:var(--bg-2);border:1px solid var(--hair);border-radius:12px;padding:12px 14px;margin:2px 0 8px;word-break:break-word"></div>
-        <div style="text-align:center;font-size:10px;color:var(--ink-3);padding:16px 0 4px" id="verStamp">Klario v1.0.2 · build 2026-07-13e</div>
+        <div style="text-align:center;font-size:10px;color:var(--ink-3);padding:16px 0 4px" id="verStamp">Klario v1.0.3 · build 2026-07-13f</div>
       </div>
     </div>
 
@@ -4193,47 +4193,55 @@ addNote=async function(){
   }
 };
 
-/* ---------- auth UI ---------- */
-let _otpEmail='';
+/* ---------- auth UI: email + password (self-contained, no email service / no browser hop) ---------- */
 function cloudSignIn(provider){
   if(!CLOUD)return toast('Add your Supabase keys to config.js first');
-  if(provider==='email'){
-    const em=prompt('Your email — we’ll send a 6-digit sign-in code:');
-    if(!em)return;
-    _otpEmail=em.trim();
-    toast('Sending your code…');
-    SB.auth.signInWithOtp({email:_otpEmail,options:{shouldCreateUser:true}}).then(({error})=>{
-      if(error){toast(error.message);return;}
-      openOtpEntry();   // enter the code IN the app — works even as a home-screen app (no browser hop)
-    });
-  } else SB.auth.signInWithOAuth({provider,options:{redirectTo:location.origin+location.pathname}});
+  if(provider==='email'){openPwAuth('in');return;}
+  SB.auth.signInWithOAuth({provider,options:{redirectTo:location.origin+location.pathname}});
 }
-function openOtpEntry(){
-  let ov=document.getElementById('otpOv');
-  if(!ov){ov=document.createElement('div');ov.id='otpOv';
+function openPwAuth(mode){
+  let ov=document.getElementById('pwOv');
+  if(!ov){ov=document.createElement('div');ov.id='pwOv';
     ov.style.cssText='display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.6);align-items:center;justify-content:center;padding:24px';
     ov.onclick=e=>{if(e.target===ov)ov.style.display='none';};
     document.body.appendChild(ov);}
+  const up=mode==='up';
   ov.innerHTML='<div style="background:var(--bg-2);border:1px solid var(--hair);border-radius:18px;padding:22px;max-width:340px;width:100%">'
-    +'<div style="font-size:16px;font-weight:800;color:var(--ink);margin-bottom:6px">Check your email</div>'
-    +'<div style="font-size:12.5px;color:var(--ink-2);line-height:1.5;margin-bottom:16px">We emailed <b>'+String(_otpEmail).replace(/</g,'&lt;')+'</b>. If it contains a <b>6-digit code</b>, enter it below. If it only has a <b>link</b>, tap that link (it opens your browser and signs you in there).</div>'
-    +'<input id="otpCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6-digit code" '
-    +'style="width:100%;text-align:center;letter-spacing:6px;font-size:20px;font-weight:700;background:var(--bg-1);border:1px solid var(--hair-2);border-radius:12px;padding:12px;color:var(--ink);font-family:inherit;outline:none;margin-bottom:14px" '
-    +'oninput="if(this.value.length===6)verifyOtpCode()">'
-    +'<button onclick="verifyOtpCode()" style="width:100%;padding:13px;border-radius:12px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:800;font-family:inherit;margin-bottom:8px">Sign in with code</button>'
-    +'<button onclick="closeOtpEntry()" style="width:100%;padding:8px;border:none;background:transparent;color:var(--ink-3);font-size:12.5px;font-family:inherit">I’ll use the link instead</button>'
+    +'<div style="font-size:17px;font-weight:800;color:var(--ink);margin-bottom:4px">'+(up?'Create your account':'Sign in')+'</div>'
+    +'<div style="font-size:12.5px;color:var(--ink-2);line-height:1.5;margin-bottom:16px">'+(up?'Pick a password. Your reports sync privately to your account — use the same email &amp; password on any device to restore them.':'Enter the email &amp; password you signed up with. Everything syncs back down.')+'</div>'
+    +'<input id="pwEmail" type="email" inputmode="email" autocomplete="username" placeholder="Email" value="'+(SESSION&&SESSION.user?SESSION.user.email:'')+'" '
+    +'style="width:100%;font-size:15px;background:var(--bg-1);border:1px solid var(--hair-2);border-radius:12px;padding:12px 14px;color:var(--ink);font-family:inherit;outline:none;margin-bottom:10px">'
+    +'<input id="pwPass" type="password" autocomplete="'+(up?'new-password':'current-password')+'" placeholder="Password (min 6 characters)" '
+    +'style="width:100%;font-size:15px;background:var(--bg-1);border:1px solid var(--hair-2);border-radius:12px;padding:12px 14px;color:var(--ink);font-family:inherit;outline:none;margin-bottom:14px" '
+    +'onkeydown="if(event.key===\'Enter\')pwGo(\''+mode+'\')">'
+    +'<button onclick="pwGo(\''+mode+'\')" style="width:100%;padding:13px;border-radius:12px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:800;font-family:inherit;margin-bottom:10px">'+(up?'Create account':'Sign in')+'</button>'
+    +'<button onclick="openPwAuth(\''+(up?'in':'up')+'\')" style="width:100%;padding:6px;border:none;background:transparent;color:var(--accent-2);font-size:12.5px;font-weight:700;font-family:inherit">'+(up?'Already have an account? Sign in':'New here? Create an account')+'</button>'
     +'</div>';
   ov.style.display='flex';
-  setTimeout(()=>{try{document.getElementById('otpCode').focus();}catch(e){}},150);
+  setTimeout(()=>{try{document.getElementById('pwEmail').focus();}catch(e){}},150);
 }
-function closeOtpEntry(){const ov=document.getElementById('otpOv');if(ov)ov.style.display='none';}
-async function verifyOtpCode(){
-  const el=document.getElementById('otpCode');const code=(el&&el.value||'').trim();
-  if(code.length<4||!_otpEmail)return;
-  toast('Signing in…');
-  const {error}=await SB.auth.verifyOtp({email:_otpEmail,token:code,type:'email'});
-  if(error){toast(error.message||'That code didn’t work — try again');return;}
-  closeOtpEntry();toast('Signed in ✓ — restoring your data…');
+function closePwAuth(){const ov=document.getElementById('pwOv');if(ov)ov.style.display='none';}
+async function pwGo(mode){
+  const email=(document.getElementById('pwEmail').value||'').trim();
+  const pass=(document.getElementById('pwPass').value||'');
+  if(!email||!/@/.test(email)){toast('Enter a valid email');return;}
+  if(pass.length<6){toast('Password needs at least 6 characters');return;}
+  toast(mode==='up'?'Creating your account…':'Signing in…');
+  if(mode==='up'){
+    const {data,error}=await SB.auth.signUp({email,password:pass});
+    if(error){toast(error.message);return;}
+    if(!data.session){toast('Account made — email confirmation is still ON in Supabase. Turn it off, or confirm via the email, then sign in.');return;}
+    closePwAuth();toast('Account created ✓ — you’re signed in');
+  } else {
+    const {error}=await SB.auth.signInWithPassword({email,password:pass});
+    if(error){toast(/invalid/i.test(error.message)?'Wrong email or password':error.message);return;}
+    closePwAuth();toast('Signed in ✓ — restoring your data…');
+  }
+}
+async function refreshApp(){
+  toast('Refreshing…');
+  try{if('serviceWorker'in navigator){const rs=await navigator.serviceWorker.getRegistrations();for(const r of rs)await r.update();}}catch(e){}
+  setTimeout(()=>location.reload(),300);
 }
 async function refreshApp(){
   toast('Refreshing…');
@@ -4255,10 +4263,10 @@ function renderAccountRow(){
       +'<div class="t"><b>Cloud sync — not configured</b><small>Local-only mode · backend/SETUP.md to enable</small></div><span class="chev">›</span></button>';
   } else if(!SESSION){
     row.innerHTML='<div class="sec-label">Account & sync</div>'
-      +'<button class="set-row" onclick="cloudSignIn(\'google\')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg>'
-      +'<div class="t"><b>Sign in with Google</b><small>Back up & sync across devices</small></div><span class="chev">›</span></button>'
-      +'<button class="set-row" onclick="cloudSignIn(\'email\')"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>'
-      +'<div class="t"><b>Sign in with email</b><small>Magic link — no password</small></div><span class="chev">›</span></button>';
+      +'<button class="set-row" onclick="openPwAuth(\'in\')"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>'
+      +'<div class="t"><b>Sign in</b><small>Email &amp; password — back up &amp; sync across devices</small></div><span class="chev">›</span></button>'
+      +'<button class="set-row" onclick="openPwAuth(\'up\')"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M5 21c0-4 3-7 7-7s7 3 7 7"/><path d="M17 3v6M20 6h-6" stroke-width="1.6"/></svg>'
+      +'<div class="t"><b>Create account</b><small>New to Klario — set an email &amp; password</small></div><span class="chev">›</span></button>';
   } else {
     row.innerHTML='<div class="sec-label">Account & sync</div>'
       +'<button class="set-row" onclick="syncNow()"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg>'
@@ -4330,7 +4338,7 @@ function decorateOnboarding(){
   const btns=document.querySelector('#ob1 .ob-btns');
   if(btns&&!document.getElementById('obSso')){
     btns.insertAdjacentHTML('beforebegin','<div id="obSso" class="ob-btns" style="margin-top:22px;margin-bottom:10px">'
-      +'<button class="ob-btn google" onclick="cloudSignIn(\'email\')">Email me a sign-in code</button></div>'
+      +'<button class="ob-btn google" onclick="openPwAuth(\'up\')">Sign in / Create account</button></div>'
       +'<div class="ob-note" style="margin-bottom:8px">— or start locally, sign in later —</div>');
   }
 }
