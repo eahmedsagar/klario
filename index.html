@@ -989,7 +989,7 @@
           <svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-.5 4"/><path d="M20 4v7h-7"/></svg>
           <div class="t"><b>Refresh app</b><small>Reload to get the latest version &amp; sync</small></div><span class="chev">›</span></button>
         <div id="aiTestOut" style="display:none;font-size:12px;line-height:1.5;color:var(--ink-2);background:var(--bg-2);border:1px solid var(--hair);border-radius:12px;padding:12px 14px;margin:2px 0 8px;word-break:break-word"></div>
-        <div style="text-align:center;font-size:10px;color:var(--ink-3);padding:16px 0 4px" id="verStamp">Klario v1.0.3 · build 2026-07-13f</div>
+        <div style="text-align:center;font-size:10px;color:var(--ink-3);padding:16px 0 4px" id="verStamp">Klario v1.0.4 · build 2026-07-13g</div>
       </div>
     </div>
 
@@ -4216,6 +4216,8 @@ function openPwAuth(mode){
     +'onkeydown="if(event.key===\'Enter\')pwGo(\''+mode+'\')">'
     +'<button onclick="pwGo(\''+mode+'\')" style="width:100%;padding:13px;border-radius:12px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:800;font-family:inherit;margin-bottom:10px">'+(up?'Create account':'Sign in')+'</button>'
     +'<button onclick="openPwAuth(\''+(up?'in':'up')+'\')" style="width:100%;padding:6px;border:none;background:transparent;color:var(--accent-2);font-size:12.5px;font-weight:700;font-family:inherit">'+(up?'Already have an account? Sign in':'New here? Create an account')+'</button>'
+    +'<div style="border-top:1px solid var(--hair);margin:12px 0 10px"></div>'
+    +'<button onclick="magicLinkSignIn()" style="width:100%;padding:6px;border:none;background:transparent;color:var(--ink-3);font-size:12px;font-family:inherit">Signed up before with a link? Email me a sign-in link</button>'
     +'</div>';
   ov.style.display='flex';
   setTimeout(()=>{try{document.getElementById('pwEmail').focus();}catch(e){}},150);
@@ -4238,10 +4240,19 @@ async function pwGo(mode){
     closePwAuth();toast('Signed in ✓ — restoring your data…');
   }
 }
-async function refreshApp(){
-  toast('Refreshing…');
-  try{if('serviceWorker'in navigator){const rs=await navigator.serviceWorker.getRegistrations();for(const r of rs)await r.update();}}catch(e){}
-  setTimeout(()=>location.reload(),300);
+function magicLinkSignIn(){
+  const em=(document.getElementById('pwEmail')&&document.getElementById('pwEmail').value||'').trim();
+  if(!em||!/@/.test(em)){toast('Type your email above first');return;}
+  toast('Sending your sign-in link…');
+  SB.auth.signInWithOtp({email:em,options:{emailRedirectTo:location.origin+location.pathname}}).then(({error})=>{
+    toast(error?error.message:'Link sent — open it in THIS browser to sign in, then set a password');
+  });
+}
+function setPasswordPrompt(){
+  const p=prompt('Set a password (min 6 characters) so you can sign in on your home-screen app with just email + password:');
+  if(p==null)return;
+  if(p.length<6){toast('Password needs at least 6 characters');return;}
+  SB.auth.updateUser({password:p}).then(({error})=>toast(error?error.message:'Password set ✓ — now use email + this password to sign in anywhere'));
 }
 async function refreshApp(){
   toast('Refreshing…');
@@ -4271,6 +4282,8 @@ function renderAccountRow(){
     row.innerHTML='<div class="sec-label">Account & sync</div>'
       +'<button class="set-row" onclick="syncNow()"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg>'
       +'<div class="t"><b>'+(SESSION.user.email||'Signed in')+'</b><small id="syncState">Synced</small></div><span class="chev">↻</span></button>'
+      +'<button class="set-row" onclick="setPasswordPrompt()"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>'
+      +'<div class="t"><b>Set a password</b><small>So you can sign in on your home-screen app</small></div><span class="chev">›</span></button>'
       +'<button class="set-row" onclick="cloudSignOut()"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>'
       +'<div class="t"><b>Sign out</b><small>Data stays on this device</small></div><span class="chev">›</span></button>';
   }
