@@ -985,8 +985,11 @@
         <button class="set-row" onclick="testAI()" id="aiTestRow">
           <svg viewBox="0 0 24 24"><path d="M12 3l2.2 5.6L20 10l-5 3.5L16.5 20 12 16.5 7.5 20 9 13.5 4 10l5.8-1.4z"/></svg>
           <div class="t"><b>Test Klario AI</b><small>Check the AI connection & see any error</small></div><span class="chev">›</span></button>
+        <button class="set-row" onclick="refreshApp()" id="refreshRow">
+          <svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-.5 4"/><path d="M20 4v7h-7"/></svg>
+          <div class="t"><b>Refresh app</b><small>Reload to get the latest version &amp; sync</small></div><span class="chev">›</span></button>
         <div id="aiTestOut" style="display:none;font-size:12px;line-height:1.5;color:var(--ink-2);background:var(--bg-2);border:1px solid var(--hair);border-radius:12px;padding:12px 14px;margin:2px 0 8px;word-break:break-word"></div>
-        <div style="text-align:center;font-size:10px;color:var(--ink-3);padding:16px 0 4px" id="verStamp">Klario v1.0.0 · build 2026-07-13c</div>
+        <div style="text-align:center;font-size:10px;color:var(--ink-3);padding:16px 0 4px" id="verStamp">Klario v1.0.1 · build 2026-07-13d</div>
       </div>
     </div>
 
@@ -3819,7 +3822,8 @@ init();
 const CFG=window.KLARIO_CONFIG||{};
 const CLOUD=!!(CFG.SUPABASE_URL&&CFG.SUPABASE_ANON_KEY&&window.supabase);
 let SB=null,SESSION=null,SYNCING=false;
-if(CLOUD)SB=window.supabase.createClient(CFG.SUPABASE_URL,CFG.SUPABASE_ANON_KEY);
+if(CLOUD)SB=window.supabase.createClient(CFG.SUPABASE_URL,CFG.SUPABASE_ANON_KEY,{
+  auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storageKey:'klario-auth'}});
 
 /* ---------- outbox: every local write queues a push ---------- */
 const TABLES={members:'members',reports:'reports',readings:'readings',notes:'notes',reminders:'reminders'};
@@ -4190,12 +4194,51 @@ addNote=async function(){
 };
 
 /* ---------- auth UI ---------- */
+let _otpEmail='';
 function cloudSignIn(provider){
   if(!CLOUD)return toast('Add your Supabase keys to config.js first');
   if(provider==='email'){
-    const em=prompt('Your email — we’ll send a magic sign-in link:');
-    if(em)SB.auth.signInWithOtp({email:em}).then(({error})=>toast(error?error.message:'Check your inbox for the link'));
+    const em=prompt('Your email — we’ll send a 6-digit sign-in code:');
+    if(!em)return;
+    _otpEmail=em.trim();
+    toast('Sending your code…');
+    SB.auth.signInWithOtp({email:_otpEmail,options:{shouldCreateUser:true}}).then(({error})=>{
+      if(error){toast(error.message);return;}
+      openOtpEntry();   // enter the code IN the app — works even as a home-screen app (no browser hop)
+    });
   } else SB.auth.signInWithOAuth({provider,options:{redirectTo:location.origin+location.pathname}});
+}
+function openOtpEntry(){
+  let ov=document.getElementById('otpOv');
+  if(!ov){ov=document.createElement('div');ov.id='otpOv';
+    ov.style.cssText='display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.6);align-items:center;justify-content:center;padding:24px';
+    ov.onclick=e=>{if(e.target===ov)ov.style.display='none';};
+    document.body.appendChild(ov);}
+  ov.innerHTML='<div style="background:var(--bg-2);border:1px solid var(--hair);border-radius:18px;padding:22px;max-width:340px;width:100%">'
+    +'<div style="font-size:16px;font-weight:800;color:var(--ink);margin-bottom:6px">Enter your code</div>'
+    +'<div style="font-size:12.5px;color:var(--ink-2);line-height:1.5;margin-bottom:16px">We emailed a 6-digit code to <b>'+String(_otpEmail).replace(/</g,'&lt;')+'</b>. Enter it here to sign in — no need to leave the app.</div>'
+    +'<input id="otpCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••" '
+    +'style="width:100%;text-align:center;letter-spacing:8px;font-size:22px;font-weight:700;background:var(--bg-1);border:1px solid var(--hair-2);border-radius:12px;padding:12px;color:var(--ink);font-family:inherit;outline:none;margin-bottom:14px" '
+    +'oninput="if(this.value.length===6)verifyOtpCode()">'
+    +'<button onclick="verifyOtpCode()" style="width:100%;padding:13px;border-radius:12px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:800;font-family:inherit;margin-bottom:8px">Sign in</button>'
+    +'<button onclick="cloudSignIn(\'email\')" style="width:100%;padding:8px;border:none;background:transparent;color:var(--ink-3);font-size:12.5px;font-family:inherit">Resend code</button>'
+    +'</div>';
+  ov.style.display='flex';
+  setTimeout(()=>{try{document.getElementById('otpCode').focus();}catch(e){}},150);
+}
+function closeOtpEntry(){const ov=document.getElementById('otpOv');if(ov)ov.style.display='none';}
+async function verifyOtpCode(){
+  const el=document.getElementById('otpCode');const code=(el&&el.value||'').trim();
+  if(code.length<4||!_otpEmail)return;
+  toast('Signing in…');
+  const {error}=await SB.auth.verifyOtp({email:_otpEmail,token:code,type:'email'});
+  if(error){toast(error.message||'That code didn’t work — try again');return;}
+  closeOtpEntry();toast('Signed in ✓ — restoring your data…');
+}
+async function refreshApp(){
+  toast('Refreshing…');
+  try{if('serviceWorker'in navigator){const rs=await navigator.serviceWorker.getRegistrations();for(const r of rs)await r.update();}}catch(e){}
+  setTimeout(()=>location.reload(),300);
 }
 async function cloudSignOut(){await SB.auth.signOut();SESSION=null;renderAccountRow();toast('Signed out — data stays on this device');}
 function renderAccountRow(){
@@ -4287,7 +4330,7 @@ function decorateOnboarding(){
   const btns=document.querySelector('#ob1 .ob-btns');
   if(btns&&!document.getElementById('obSso')){
     btns.insertAdjacentHTML('beforebegin','<div id="obSso" class="ob-btns" style="margin-top:22px;margin-bottom:10px">'
-      +'<button class="ob-btn google" onclick="cloudSignIn(\'email\')">Email me a sign-in link</button></div>'
+      +'<button class="ob-btn google" onclick="cloudSignIn(\'email\')">Email me a sign-in code</button></div>'
       +'<div class="ob-note" style="margin-bottom:8px">— or start locally, sign in later —</div>');
   }
 }
