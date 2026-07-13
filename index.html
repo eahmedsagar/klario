@@ -989,7 +989,7 @@
           <svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-.5 4"/><path d="M20 4v7h-7"/></svg>
           <div class="t"><b>Refresh app</b><small>Reload to get the latest version &amp; sync</small></div><span class="chev">›</span></button>
         <div id="aiTestOut" style="display:none;font-size:12px;line-height:1.5;color:var(--ink-2);background:var(--bg-2);border:1px solid var(--hair);border-radius:12px;padding:12px 14px;margin:2px 0 8px;word-break:break-word"></div>
-        <div style="text-align:center;font-size:10px;color:var(--ink-3);padding:16px 0 4px" id="verStamp">Klario v1.0.1 · build 2026-07-13d</div>
+        <div style="text-align:center;font-size:10px;color:var(--ink-3);padding:16px 0 4px" id="verStamp">Klario v1.0.2 · build 2026-07-13e</div>
       </div>
     </div>
 
@@ -4215,13 +4215,13 @@ function openOtpEntry(){
     ov.onclick=e=>{if(e.target===ov)ov.style.display='none';};
     document.body.appendChild(ov);}
   ov.innerHTML='<div style="background:var(--bg-2);border:1px solid var(--hair);border-radius:18px;padding:22px;max-width:340px;width:100%">'
-    +'<div style="font-size:16px;font-weight:800;color:var(--ink);margin-bottom:6px">Enter your code</div>'
-    +'<div style="font-size:12.5px;color:var(--ink-2);line-height:1.5;margin-bottom:16px">We emailed a 6-digit code to <b>'+String(_otpEmail).replace(/</g,'&lt;')+'</b>. Enter it here to sign in — no need to leave the app.</div>'
-    +'<input id="otpCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••" '
-    +'style="width:100%;text-align:center;letter-spacing:8px;font-size:22px;font-weight:700;background:var(--bg-1);border:1px solid var(--hair-2);border-radius:12px;padding:12px;color:var(--ink);font-family:inherit;outline:none;margin-bottom:14px" '
+    +'<div style="font-size:16px;font-weight:800;color:var(--ink);margin-bottom:6px">Check your email</div>'
+    +'<div style="font-size:12.5px;color:var(--ink-2);line-height:1.5;margin-bottom:16px">We emailed <b>'+String(_otpEmail).replace(/</g,'&lt;')+'</b>. If it contains a <b>6-digit code</b>, enter it below. If it only has a <b>link</b>, tap that link (it opens your browser and signs you in there).</div>'
+    +'<input id="otpCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6-digit code" '
+    +'style="width:100%;text-align:center;letter-spacing:6px;font-size:20px;font-weight:700;background:var(--bg-1);border:1px solid var(--hair-2);border-radius:12px;padding:12px;color:var(--ink);font-family:inherit;outline:none;margin-bottom:14px" '
     +'oninput="if(this.value.length===6)verifyOtpCode()">'
-    +'<button onclick="verifyOtpCode()" style="width:100%;padding:13px;border-radius:12px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:800;font-family:inherit;margin-bottom:8px">Sign in</button>'
-    +'<button onclick="cloudSignIn(\'email\')" style="width:100%;padding:8px;border:none;background:transparent;color:var(--ink-3);font-size:12.5px;font-family:inherit">Resend code</button>'
+    +'<button onclick="verifyOtpCode()" style="width:100%;padding:13px;border-radius:12px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:800;font-family:inherit;margin-bottom:8px">Sign in with code</button>'
+    +'<button onclick="closeOtpEntry()" style="width:100%;padding:8px;border:none;background:transparent;color:var(--ink-3);font-size:12.5px;font-family:inherit">I’ll use the link instead</button>'
     +'</div>';
   ov.style.display='flex';
   setTimeout(()=>{try{document.getElementById('otpCode').focus();}catch(e){}},150);
